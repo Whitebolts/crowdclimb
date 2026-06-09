@@ -19,7 +19,7 @@ export default function HostPage() {
   const [showQuestionBuilder, setShowQuestionBuilder] = useState(true)
 
   const fetchPlayers = async (targetRoomId) => {
-    if (!targetRoomId) return
+    if (!targetRoomId) return 
 
     const { data, error } = await supabase
       .from('players')
