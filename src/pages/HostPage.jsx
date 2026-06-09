@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -31,8 +30,10 @@ export default function HostPage() {
   const [draftQuestion, setDraftQuestion] = useState('')
   const [draftAnswers, setDraftAnswers] = useState(['', '', '', ''])
   const [customQuestions, setCustomQuestions] = useState([])
+  const [showQuestionBuilder, setShowQuestionBuilder] = useState(true)
 
-  const usingQuestions = customQuestions.length > 0 ? customQuestions : starterQuestions
+  const usingQuestions =
+    customQuestions.length > 0 ? customQuestions : starterQuestions
 
   const fetchPlayers = async (targetRoomId) => {
     if (!targetRoomId) return
@@ -220,7 +221,7 @@ export default function HostPage() {
       }
     }
 
-    // Reset player scores for this room
+    // Reset scores for players in this room
     const { data: roomPlayers, error: roomPlayersError } = await supabase
       .from('players')
       .select('id')
@@ -245,7 +246,7 @@ export default function HostPage() {
       }
     }
 
-    // Remove old questions for this room (answers & submissions cascade)
+    // Remove old questions for this room
     const { error: deleteQuestionsError } = await supabase
       .from('questions')
       .delete()
@@ -257,7 +258,7 @@ export default function HostPage() {
       return
     }
 
-    // Insert current question set (custom if provided, otherwise starter)
+    // Insert active question set
     for (let i = 0; i < usingQuestions.length; i++) {
       const q = usingQuestions[i]
 
@@ -296,6 +297,7 @@ export default function HostPage() {
 
     setRoomId(currentRoomId)
     setRevealResult(null)
+    setShowQuestionBuilder(false)
 
     await fetchPlayers(currentRoomId)
     await fetchRoomState(currentRoomId)
@@ -512,61 +514,75 @@ export default function HostPage() {
         <button onClick={startGame}>Start Game</button>
         <button style={{ marginLeft: 10 }} onClick={reveal}>Reveal</button>
         <button style={{ marginLeft: 10 }} onClick={nextQuestion}>Next Question</button>
+        <button
+          style={{ marginLeft: 10 }}
+          onClick={() => setShowQuestionBuilder(prev => !prev)}
+        >
+          {showQuestionBuilder ? 'Hide Questions' : 'Show Questions'}
+        </button>
       </div>
 
-      <div className="card">
-        <h2>Question Builder</h2>
-        <p>
-          Add your own room questions below. If you leave this blank, the starter stock questions will be used.
-        </p>
+      {showQuestionBuilder && (
+        <div className="card">
+          <h2>Question Builder</h2>
+          <p>
+            Add your own room questions below. If you leave this blank, the starter stock questions will be used.
+          </p>
 
-        <textarea
-          value={draftQuestion}
-          onChange={(e) => setDraftQuestion(e.target.value)}
-          placeholder="Enter question prompt"
-        />
+          <textarea
+            value={draftQuestion}
+            onChange={(e) => setDraftQuestion(e.target.value)}
+            placeholder="Enter question prompt"
+          />
 
-        <input
-          value={draftAnswers[0]}
-          onChange={(e) => setDraftAnswers(prev => [e.target.value, prev[1], prev[2], prev[3]])}
-          placeholder="Answer 1"
-        />
-        <input
-          value={draftAnswers[1]}
-          onChange={(e) => setDraftAnswers(prev => [prev[0], e.target.value, prev[2], prev[3]])}
-          placeholder="Answer 2"
-        />
-        <input
-          value={draftAnswers[2]}
-          onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], e.target.value, prev[3]])}
-          placeholder="Answer 3 (optional)"
-        />
-        <input
-          value={draftAnswers[3]}
-          onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], prev[2], e.target.value])}
-          placeholder="Answer 4 (optional)"
-        />
+          <input
+            value={draftAnswers[0]}
+            onChange={(e) => setDraftAnswers(prev => [e.target.value, prev[1], prev[2], prev[3]])}
+            placeholder="Answer 1"
+          />
+          <input
+            value={draftAnswers[1]}
+            onChange={(e) => setDraftAnswers(prev => [prev[0], e.target.value, prev[2], prev[3]])}
+            placeholder="Answer 2"
+          />
+          <input
+            value={draftAnswers[2]}
+            onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], e.target.value, prev[3]])}
+            placeholder="Answer 3 (optional)"
+          />
+          <input
+            value={draftAnswers[3]}
+            onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], prev[2], e.target.value])}
+            placeholder="Answer 4 (optional)"
+          />
 
-        <button onClick={addQuestionDraft}>Add Question</button>
+          <button onClick={addQuestionDraft}>Add Question</button>
 
-        <div style={{ marginTop: 16 }}>
-          <strong>Question Set For This Room</strong>
-          {usingQuestions.map((q, index) => (
-            <div key={index} className="card" style={{ marginTop: 12, marginBottom: 0, padding: 14 }}>
-              <div><strong>{index + 1}. {q.question_text}</strong></div>
-              <div style={{ marginTop: 8 }}>{q.answers.join(' • ')}</div>
-              {customQuestions.length > 0 && (
-                <button
-                  style={{ marginTop: 10 }}
-                  onClick={() => removeQuestion(index)}
-                >
-                  Remove
-                </button>
-              )}
-            </div>
-          ))}
+          <div style={{ marginTop: 16 }}>
+            <strong>Question Set For This Room</strong>
+            {usingQuestions.map((q, index) => (
+              <div
+                key={index}
+                className="card"
+                style={{ marginTop: 12, marginBottom: 0, padding: 14 }}
+              >
+                <div>
+                  <strong>{index + 1}. {q.question_text}</strong>
+                </div>
+                <div style={{ marginTop: 8 }}>{q.answers.join(' • ')}</div>
+                {customQuestions.length > 0 && (
+                  <button
+                    style={{ marginTop: 10 }}
+                    onClick={() => removeQuestion(index)}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="card">
         <h2>Current Question</h2>
