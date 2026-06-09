@@ -4,11 +4,12 @@ import { supabase } from '../lib/supabase'
 
 export default function PlayerPage() {
   const { roomCode } = useParams()
-  const [selected, setSelected] = useState(null)
+
   const [question, setQuestion] = useState(null)
   const [roomId, setRoomId] = useState(null)
+  const [selected, setSelected] = useState(null)
   const [submitted, setSubmitted] = useState(false)
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(null)
+  const [currentQuestionId, setCurrentQuestionId] = useState(null)
 
   const loadQuestion = async () => {
     // 1. Load room
@@ -30,19 +31,7 @@ export default function PlayerPage() {
 
     setRoomId(room.id)
 
-    // only reload question if question index changed OR question not loaded yet
-    const shouldReload =
-      currentQuestionIndex === null ||
-      room.current_question !== currentQuestionIndex ||
-      question === null
-
-    if (!shouldReload) {
-      return
-    }
-
-    setCurrentQuestionIndex(room.current_question)
-
-    // 2. Load current question
+    // 2. Load the current question row for this room
     const { data: questionRow, error: questionError } = await supabase
       .from('questions')
       .select('id, question_text, question_order')
@@ -57,11 +46,15 @@ export default function PlayerPage() {
 
     if (!questionRow) {
       console.error('No question found for this room')
-      setQuestion(null)
       return
     }
 
-    // 3. Load answers
+    // If question hasn't changed, no need to rebuild the page state
+    if (questionRow.id === currentQuestionId) {
+      return
+    }
+
+    // 3. Load answers for the new question
     const { data: answers, error: answersError } = await supabase
       .from('answers')
       .select('id, answer_text, answer_order')
@@ -73,17 +66,18 @@ export default function PlayerPage() {
       return
     }
 
+    // 4. Set new question
     setQuestion({
       id: questionRow.id,
       text: questionRow.question_text,
       answers: answers.map(a => a.answer_text)
     })
 
-    // 4. Reset local UI for the new question
+    setCurrentQuestionId(questionRow.id)
     setSelected(null)
     setSubmitted(false)
 
-    // 5. Check whether this player already submitted for this question
+    // 5. Check whether this player already submitted for this new question
     const nickname = localStorage.getItem('nickname')
 
     if (nickname) {
@@ -114,7 +108,7 @@ export default function PlayerPage() {
     }, 2000)
 
     return () => clearInterval(interval)
-  }, [roomCode, currentQuestionIndex])
+  }, [roomCode, currentQuestionId])
 
   const submitAnswer = async () => {
     if (!selected || !question || !roomId || submitted) return
@@ -124,7 +118,7 @@ export default function PlayerPage() {
     const { error } = await supabase.from('submissions').insert({
       room_id: roomId,
       question_id: question.id,
-      nickname: nickname,
+      nickname,
       answer: selected
     })
 
