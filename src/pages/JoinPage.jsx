@@ -16,7 +16,7 @@ export default function JoinPage() {
 
     setLoading(true)
 
-    // 1. Find the room
+    // 1. Find room
     const { data: room, error: roomError } = await supabase
       .from('rooms')
       .select('id, room_code, status')
@@ -36,33 +36,52 @@ export default function JoinPage() {
       return
     }
 
-    // 2. Insert player into players table
-    const { data: player, error: playerError } = await supabase
+    // 2. Reuse existing player in this room if nickname already exists
+    const { data: existingPlayer, error: existingPlayerError } = await supabase
       .from('players')
-      .insert({
-        room_id: room.id,
-        nickname,
-        score: 0
-      })
-      .select()
-      .single()
+      .select('*')
+      .eq('room_id', room.id)
+      .eq('nickname', nickname)
+      .maybeSingle()
 
-    if (playerError) {
-      console.error('Player insert error:', playerError)
-      alert(`Could not join room: ${playerError.message}`)
+    if (existingPlayerError) {
+      console.error('Existing player lookup error:', existingPlayerError)
+      alert(`Player lookup error: ${existingPlayerError.message}`)
       setLoading(false)
       return
     }
 
-    // 3. Save local info for later use
+    let playerRecord = existingPlayer
+
+    // 3. Insert only if player does not already exist
+    if (!playerRecord) {
+      const { data: player, error: playerError } = await supabase
+        .from('players')
+        .insert({
+          room_id: room.id,
+          nickname,
+          score: 0
+        })
+        .select()
+        .single()
+
+      if (playerError) {
+        console.error('Player insert error:', playerError)
+        alert(`Could not join room: ${playerError.message}`)
+        setLoading(false)
+        return
+      }
+
+      playerRecord = player
+    }
+
+    // 4. Save local state
     localStorage.setItem('nickname', nickname)
-    localStorage.setItem('playerId', player.id)
+    localStorage.setItem('playerId', playerRecord.id)
     localStorage.setItem('roomId', room.id)
     localStorage.setItem('roomCode', room.room_code)
 
-    // 4. Go to the player page
     navigate(`/play/${roomCode}`)
-
     setLoading(false)
   }
 
