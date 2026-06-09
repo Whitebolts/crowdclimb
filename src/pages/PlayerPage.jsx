@@ -1,18 +1,19 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 export default function PlayerPage() {
   const { roomCode } = useParams()
+  const navigate = useNavigate()
 
   const [question, setQuestion] = useState(null)
   const [roomId, setRoomId] = useState(null)
   const [selected, setSelected] = useState(null)
   const [submitted, setSubmitted] = useState(false)
   const [currentQuestionId, setCurrentQuestionId] = useState(null)
+  const [roomStatus, setRoomStatus] = useState('lobby')
 
   const loadQuestion = async () => {
-    // 1. Load room
     const { data: room, error: roomError } = await supabase
       .from('rooms')
       .select('id, current_question, status')
@@ -30,8 +31,16 @@ export default function PlayerPage() {
     }
 
     setRoomId(room.id)
+    setRoomStatus(room.status)
 
-    // 2. Load current question
+    // If the host has finished the game, stop loading more questions
+    if (room.status === 'finished') {
+      setQuestion(null)
+      setSubmitted(false)
+      setSelected(null)
+      return
+    }
+
     const { data: questionRow, error: questionError } = await supabase
       .from('questions')
       .select('id, question_text, question_order')
@@ -49,12 +58,11 @@ export default function PlayerPage() {
       return
     }
 
-    // If this is the same question as before, do nothing
+    // If this is the same active question, don't rebuild the state unnecessarily
     if (questionRow.id === currentQuestionId) {
       return
     }
 
-    // 3. Load answers
     const { data: answers, error: answersError } = await supabase
       .from('answers')
       .select('id, answer_text, answer_order')
@@ -76,7 +84,6 @@ export default function PlayerPage() {
     setSelected(null)
     setSubmitted(false)
 
-    // 4. Check whether THIS PLAYER has already submitted for this question
     const playerId = localStorage.getItem('playerId')
 
     if (playerId) {
@@ -135,6 +142,30 @@ export default function PlayerPage() {
     }
 
     setSubmitted(true)
+  }
+
+  const returnToJoinPage = () => {
+    localStorage.removeItem('roomId')
+    localStorage.removeItem('roomCode')
+    localStorage.removeItem('playerId')
+    localStorage.removeItem('nickname')
+    navigate('/')
+  }
+
+  // End-of-game screen
+  if (roomStatus === 'finished') {
+    return (
+      <div className="container">
+        <div className="card">
+          <h1>Room {roomCode}</h1>
+          <h2>Game finished</h2>
+          <p>The game has ended. You can return to the join page to enter a new room code.</p>
+          <button onClick={returnToJoinPage}>
+            Return to Join Page
+          </button>
+        </div>
+      </div>
+    )
   }
 
   if (!question) {
