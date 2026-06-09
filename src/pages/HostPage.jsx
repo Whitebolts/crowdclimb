@@ -25,6 +25,7 @@ export default function HostPage() {
   const [currentQuestionText, setCurrentQuestionText] = useState('')
   const [roomStatus, setRoomStatus] = useState('lobby')
   const [revealResult, setRevealResult] = useState(null)
+  const [submissions, setSubmissions] = useState([])
 
   const fetchPlayers = async (targetRoomId) => {
     if (!targetRoomId) return
@@ -82,19 +83,59 @@ export default function HostPage() {
     setCurrentQuestionText(current ? current.question_text : 'No question found')
   }
 
+  const fetchSubmissions = async (targetRoomId, questionOrderArg = null) => {
+    if (!targetRoomId) return
+
+    let questionOrder = questionOrderArg ?? currentQuestion
+
+    const { data: questionRow, error: questionError } = await supabase
+      .from('questions')
+      .select('id')
+      .eq('room_id', targetRoomId)
+      .eq('question_order', questionOrder)
+      .maybeSingle()
+
+    if (questionError) {
+      console.error('Submission question lookup error:', questionError)
+      return
+    }
+
+    if (!questionRow) {
+      setSubmissions([])
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('submissions')
+      .select('nickname, answer')
+      .eq('room_id', targetRoomId)
+      .eq('question_id', questionRow.id)
+
+    if (error) {
+      console.error('Submissions fetch error:', error)
+      return
+    }
+
+    setSubmissions(data || [])
+  }
+
   useEffect(() => {
     if (!roomId) return
 
-    fetchPlayers(roomId)
-    fetchRoomState(roomId)
+    const runRefresh = async () => {
+      await fetchPlayers(roomId)
+      await fetchRoomState(roomId)
+      await fetchSubmissions(roomId)
+    }
+
+    runRefresh()
 
     const interval = setInterval(() => {
-      fetchPlayers(roomId)
-      fetchRoomState(roomId)
+      runRefresh()
     }, 2000)
 
     return () => clearInterval(interval)
-  }, [roomId])
+  }, [roomId, currentQuestion])
 
   const startGame = async () => {
     let currentRoomId
@@ -201,6 +242,7 @@ export default function HostPage() {
 
     await fetchPlayers(currentRoomId)
     await fetchRoomState(currentRoomId)
+    await fetchSubmissions(currentRoomId, 0)
 
     alert('Game started')
   }
@@ -251,7 +293,7 @@ export default function HostPage() {
       return
     }
 
-    const { data: submissions, error: submissionsError } = await supabase
+    const { data: currentSubmissions, error: submissionsError } = await supabase
       .from('submissions')
       .select('nickname, answer')
       .eq('room_id', roomId)
@@ -263,13 +305,13 @@ export default function HostPage() {
       return
     }
 
-    if (!submissions || submissions.length === 0) {
+    if (!currentSubmissions || currentSubmissions.length === 0) {
       alert('No submissions yet for this question')
       return
     }
 
     const counts = {}
-    submissions.forEach(sub => {
+    currentSubmissions.forEach(sub => {
       counts[sub.answer] = (counts[sub.answer] || 0) + 1
     })
 
@@ -278,7 +320,7 @@ export default function HostPage() {
       answer => counts[answer] === max
     )
 
-    const winningNicknames = submissions
+    const winningNicknames = currentSubmissions
       .filter(sub => winningAnswers.includes(sub.answer))
       .map(sub => sub.nickname)
 
@@ -324,6 +366,8 @@ export default function HostPage() {
       counts,
       winningNicknames
     })
+
+    setSubmissions(currentSubmissions)
 
     await fetchPlayers(roomId)
     await fetchRoomState(roomId)
@@ -382,7 +426,9 @@ export default function HostPage() {
     }
 
     setRevealResult(null)
+    setSubmissions([])
     await fetchRoomState(roomId)
+    await fetchSubmissions(roomId, nextIndex)
   }
 
   const sortedPlayers = [...players].sort((a, b) => {
@@ -392,6 +438,11 @@ export default function HostPage() {
 
   const highestScore =
     sortedPlayers.length > 0 ? Math.max(...sortedPlayers.map(p => p.score)) : 0
+
+  const submittedMap = {}
+  submissions.forEach(sub => {
+    submittedMap[sub.nickname] = sub.answer
+  })
 
   return (
     <div className="container">
@@ -418,6 +469,41 @@ export default function HostPage() {
           Question {questionCount === 0 ? 0 : currentQuestion + 1} / {questionCount}
         </p>
         <p>{currentQuestionText || 'Start the game to load questions'}</p>
+      </div>
+
+      <div className="card">
+        <h2>Submission Status</h2>
+        {players.length === 0 ? (
+          <p>No players joined this room yet.</p>
+        ) : (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Submitted</th>
+                <th>Answer</th>
+              </tr>
+            </thead>
+            <tbody>
+              {players.map(player => {
+                const submittedAnswer = submittedMap[player.nickname]
+                const hasSubmitted = Boolean(submittedAnswer)
+
+                return (
+                  <tr key={player.id}>
+                    <td>{player.nickname}</td>
+                    <td>{hasSubmitted ? 'Yes' : 'No'}</td>
+                    <td>
+                      {roomStatus === 'reveal'
+                        ? (submittedAnswer || '—')
+                        : (hasSubmitted ? 'Hidden' : 'Waiting')}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="card">
@@ -481,19 +567,6 @@ export default function HostPage() {
               )
             })}
           </div>
-        )}
-      </div>
-
-      <div className="card">
-        <h2>Connected Players / Scores</h2>
-        {players.length === 0 ? (
-          <p>No players joined this room yet.</p>
-        ) : (
-          players.map(player => (
-            <div key={player.id}>
-              {player.nickname} — {player.score}
-            </div>
-          ))
         )}
       </div>
     </div>
