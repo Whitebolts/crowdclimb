@@ -5,34 +5,54 @@ export default function HostPage(){
   const [roomCode] = useState(String(Math.floor(1000 + Math.random() * 9000)))
   const [players,setPlayers] = useState([])
 
-  useEffect(()=>{
-    const fetchPlayers = async () => {
-      const { data } = await supabase.from('players').select('*')
-      setPlayers(data || [])
-    }
+  useEffect(() => {
 
-    fetchPlayers()
+  const createRoom = async () => {
+    await supabase.from('rooms').insert({
+      room_code: roomCode,
+      status: 'lobby'
+    })
+  }
 
-    const channel = supabase
-      .channel('players-live')
-      .on('postgres_changes', {
+  createRoom()
+
+  const fetchPlayers = async () => {
+    const { data } = await supabase
+      .from('players')
+      .select('*')
+
+    setPlayers(data || [])
+  }
+
+  fetchPlayers()
+
+  const channel = supabase
+    .channel('players-live')
+    .on(
+      'postgres_changes',
+      {
         event:'*',
         schema:'public',
         table:'players'
-      }, () => fetchPlayers())
-      .subscribe()
+      },
+      () => fetchPlayers()
+    )
+    .subscribe()
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  },[])
+  return () => {
+    supabase.removeChannel(channel)
+  }
+
+},[])
 
   return (
     <div className="container">
       <div className="card">
         <h1>Host Screen</h1>
         <h2>Room Code: {roomCode}</h2>
-        <button>Start Game</button>
+        <button onClick={() => alert('Start Game clicked')}>
+  Start Game
+</button>
         <button style={{marginLeft:10}}>Reveal</button>
         <button style={{marginLeft:10}}>Next Question</button>
       </div>
