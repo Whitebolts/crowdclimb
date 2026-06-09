@@ -293,6 +293,18 @@ export default function HostPage() {
       }
     }
 
+    // clear old submissions and start fresh
+    const { error: deleteSubmissionsError } = await supabase
+      .from('submissions')
+      .delete()
+      .eq('room_id', currentRoomId)
+
+    if (deleteSubmissionsError) {
+      console.error('Submissions delete error:', deleteSubmissionsError)
+      alert(`Could not clear previous submissions: ${deleteSubmissionsError.message}`)
+      return
+    }
+
     setRoomId(currentRoomId)
     setRevealResult(null)
     setShowQuestionBuilder(false)
@@ -432,6 +444,86 @@ export default function HostPage() {
     await fetchRoomState(roomId)
   }
 
+  const restartGame = async () => {
+    if (!roomId) {
+      alert('Start the game first')
+      return
+    }
+
+    // reset scores
+    for (const player of players) {
+      const { error: scoreResetError } = await supabase
+        .from('players')
+        .update({ score: 0 })
+        .eq('id', player.id)
+
+      if (scoreResetError) {
+        console.error('Score reset error:', scoreResetError)
+        alert(`Could not reset player scores: ${scoreResetError.message}`)
+        return
+      }
+    }
+
+    // clear submissions but keep current questions/answers
+    const { error: deleteSubmissionsError } = await supabase
+      .from('submissions')
+      .delete()
+      .eq('room_id', roomId)
+
+    if (deleteSubmissionsError) {
+      console.error('Submissions delete error:', deleteSubmissionsError)
+      alert(`Could not clear submissions: ${deleteSubmissionsError.message}`)
+      return
+    }
+
+    const { error: roomResetError } = await supabase
+      .from('rooms')
+      .update({
+        current_question: 0,
+        status: 'question'
+      })
+      .eq('id', roomId)
+
+    if (roomResetError) {
+      console.error('Room reset error:', roomResetError)
+      alert(`Could not restart game: ${roomResetError.message}`)
+      return
+    }
+
+    setRevealResult(null)
+    setSubmissions([])
+    setShowQuestionBuilder(false)
+
+    await fetchPlayers(roomId)
+    await fetchRoomState(roomId)
+    await fetchSubmissions(roomId, 0)
+
+    alert('Game restarted using the existing question set')
+  }
+
+  const resetGame = async () => {
+    const confirmed = window.confirm(
+      'Warning: proceeding will erase all questions, players, submissions, and scores for this room. Do you want to continue?'
+    )
+
+    if (!confirmed) return
+
+    if (roomId) {
+      const { error: deleteRoomError } = await supabase
+        .from('rooms')
+        .delete()
+        .eq('id', roomId)
+
+      if (deleteRoomError) {
+        console.error('Room delete error:', deleteRoomError)
+        alert(`Could not reset room: ${deleteRoomError.message}`)
+        return
+      }
+    }
+
+    window.location.reload()
+  }
+
   const nextQuestion = async () => {
     if (!roomId) {
       alert('Start the game first')
@@ -531,6 +623,8 @@ export default function HostPage() {
         >
           Next Question
         </button>
+        <button style={{ marginLeft: 10 }} onClick={restartGame}>Restart Game</button>
+        <button style={{ marginLeft: 10 }} onClick={resetGame}>Reset</button>
         <button
           style={{ marginLeft: 10 }}
           onClick={() => setShowQuestionBuilder(prev => !prev)}
