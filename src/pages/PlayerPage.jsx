@@ -31,7 +31,7 @@ export default function PlayerPage() {
 
     setRoomId(room.id)
 
-    // 2. Load the current question row for this room
+    // 2. Load current question
     const { data: questionRow, error: questionError } = await supabase
       .from('questions')
       .select('id, question_text, question_order')
@@ -49,12 +49,12 @@ export default function PlayerPage() {
       return
     }
 
-    // If question hasn't changed, no need to rebuild the page state
+    // If this is the same question as before, do nothing
     if (questionRow.id === currentQuestionId) {
       return
     }
 
-    // 3. Load answers for the new question
+    // 3. Load answers
     const { data: answers, error: answersError } = await supabase
       .from('answers')
       .select('id, answer_text, answer_order')
@@ -66,7 +66,6 @@ export default function PlayerPage() {
       return
     }
 
-    // 4. Set new question
     setQuestion({
       id: questionRow.id,
       text: questionRow.question_text,
@@ -77,15 +76,15 @@ export default function PlayerPage() {
     setSelected(null)
     setSubmitted(false)
 
-    // 5. Check whether this player already submitted for this new question
-    const nickname = localStorage.getItem('nickname')
+    // 4. Check whether THIS PLAYER has already submitted for this question
+    const playerId = localStorage.getItem('playerId')
 
-    if (nickname) {
+    if (playerId) {
       const { data: existingSubmission, error: submissionCheckError } = await supabase
         .from('submissions')
         .select('id')
         .eq('room_id', room.id)
-        .eq('nickname', nickname)
+        .eq('player_id', playerId)
         .eq('question_id', questionRow.id)
         .maybeSingle()
 
@@ -113,10 +112,17 @@ export default function PlayerPage() {
   const submitAnswer = async () => {
     if (!selected || !question || !roomId || submitted) return
 
+    const playerId = localStorage.getItem('playerId')
     const nickname = localStorage.getItem('nickname')
+
+    if (!playerId) {
+      alert('Missing player ID. Please rejoin the room.')
+      return
+    }
 
     const { error } = await supabase.from('submissions').insert({
       room_id: roomId,
+      player_id: playerId,
       question_id: question.id,
       nickname,
       answer: selected
