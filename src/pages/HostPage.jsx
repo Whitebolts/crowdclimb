@@ -159,7 +159,6 @@ export default function HostPage() {
       return false
     }
 
-    // remove old questions for this room
     const { error: deleteQuestionsError } = await supabase
       .from('questions')
       .delete()
@@ -171,7 +170,6 @@ export default function HostPage() {
       return false
     }
 
-    // clear old submissions because question ids change
     const { error: deleteSubmissionsError } = await supabase
       .from('submissions')
       .delete()
@@ -183,7 +181,6 @@ export default function HostPage() {
       return false
     }
 
-    // insert the current custom question set
     for (let i = 0; i < customQuestions.length; i++) {
       const q = customQuestions[i]
 
@@ -251,14 +248,7 @@ export default function HostPage() {
     return true
   }
 
-  const startGame = async () => {
-    let currentRoomId
-
-    if (customQuestions.length === 0) {
-      alert('Add at least one custom question before starting the game.')
-      return
-    }
-
+  const ensureRoom = async () => {
     const { data: existingRoom, error: lookupError } = await supabase
       .from('rooms')
       .select('id')
@@ -268,43 +258,53 @@ export default function HostPage() {
     if (lookupError) {
       console.error('Room lookup error:', lookupError)
       alert(`Room lookup error: ${lookupError.message}`)
+      return null
+    }
+
+    if (existingRoom) {
+      return existingRoom.id
+    }
+
+    const { data: createdRoom, error: insertRoomError } = await supabase
+      .from('rooms')
+      .insert({
+        room_code: roomCode,
+        status: 'question',
+        current_question: 0
+      })
+      .select()
+      .single()
+
+    if (insertRoomError) {
+      console.error('Room insert error:', insertRoomError)
+      alert(`Could not create room: ${insertRoomError.message}`)
+      return null
+    }
+
+    return createdRoom.id
+  }
+
+  const startGame = async () => {
+    if (customQuestions.length === 0) {
+      alert('Add at least one custom question before starting the game.')
       return
     }
 
-    if (!existingRoom) {
-      const { data: createdRoom, error: insertRoomError } = await supabase
-        .from('rooms')
-        .insert({
-          room_code: roomCode,
-          status: 'question',
-          current_question: 0
-        })
-        .select()
-        .single()
+    const currentRoomId = await ensureRoom()
+    if (!currentRoomId) return
 
-      if (insertRoomError) {
-        console.error('Room insert error:', insertRoomError)
-        alert(`Could not start game: ${insertRoomError.message}`)
-        return
-      }
+    const { error: updateRoomError } = await supabase
+      .from('rooms')
+      .update({
+        status: 'question',
+        current_question: 0
+      })
+      .eq('id', currentRoomId)
 
-      currentRoomId = createdRoom.id
-    } else {
-      currentRoomId = existingRoom.id
-
-      const { error: updateRoomError } = await supabase
-        .from('rooms')
-        .update({
-          status: 'question',
-          current_question: 0
-        })
-        .eq('id', currentRoomId)
-
-      if (updateRoomError) {
-        console.error('Room update error:', updateRoomError)
-        alert(`Could not start game: ${updateRoomError.message}`)
-        return
-      }
+    if (updateRoomError) {
+      console.error('Room update error:', updateRoomError)
+      alert(`Could not start game: ${updateRoomError.message}`)
+      return
     }
 
     const scoresReset = await resetScoresForRoom(currentRoomId)
@@ -750,7 +750,7 @@ export default function HostPage() {
 
       {isGameFinished && (
         <div className="card" style={{ background: '#fffaf3', borderColor: '#fcd34d' }}>
-          <h2>🏆 Game Winner</h2>
+          <h2> Game Winner</h2>
           {winnerNames.length === 1 ? (
             <p>
               <strong>{winnerNames[0]}</strong> wins with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'}!
