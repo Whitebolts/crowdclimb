@@ -24,95 +24,75 @@ export default function HostPage() {
   const [questionCount, setQuestionCount] = useState(0)
   const [currentQuestionText, setCurrentQuestionText] = useState('')
 
+  const fetchPlayers = async (targetRoomId) => {
+    if (!targetRoomId) return
+
+    const { data, error } = await supabase
+      .from('players')
+      .select('*')
+      .eq('room_id', targetRoomId)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      console.error('Player fetch error:', error)
+      return
+    }
+
+    setPlayers(data || [])
+  }
+
+  const fetchRoomState = async (targetRoomId) => {
+    if (!targetRoomId) return
+
+    const { data: room, error: roomError } = await supabase
+      .from('rooms')
+      .select('id, current_question, status')
+      .eq('id', targetRoomId)
+      .maybeSingle()
+
+    if (roomError) {
+      console.error('Room state fetch error:', roomError)
+      return
+    }
+
+    if (!room) return
+
+    setCurrentQuestion(room.current_question)
+
+    const { data: questions, error: questionsError } = await supabase
+      .from('questions')
+      .select('id, question_text, question_order')
+      .eq('room_id', targetRoomId)
+      .order('question_order', { ascending: true })
+
+    if (questionsError) {
+      console.error('Question fetch error:', questionsError)
+      return
+    }
+
+    setQuestionCount(questions.length)
+
+    const current = questions.find(
+      q => q.question_order === room.current_question
+    )
+
+    setCurrentQuestionText(current ? current.question_text : 'No question found')
+  }
+
   useEffect(() => {
     if (!roomId) return
 
-    const fetchPlayers = async () => {
-      const { data, error } = await supabase
-        .from('players')
-        .select('*')
-        .eq('room_id', roomId)
-        .order('created_at', { ascending: true })
+    // initial fetch
+    fetchPlayers(roomId)
+    fetchRoomState(roomId)
 
-      if (error) {
-        console.error('Player fetch error:', error)
-        return
-      }
+    // fallback polling to keep host screen updated
+    const interval = setInterval(() => {
+      fetchPlayers(roomId)
+      fetchRoomState(roomId)
+    }, 2000)
 
-      setPlayers(data || [])
-    }
-
-    const fetchRoomState = async () => {
-      const { data: room, error: roomError } = await supabase
-        .from('rooms')
-        .select('current_question, status')
-        .eq('id', roomId)
-        .maybeSingle()
-
-      if (roomError) {
-        console.error('Room state fetch error:', roomError)
-        return
-      }
-
-      if (!room) return
-
-      setCurrentQuestion(room.current_question)
-
-      const { data: questions, error: questionsError } = await supabase
-        .from('questions')
-        .select('id, question_text, question_order')
-        .eq('room_id', roomId)
-        .order('question_order', { ascending: true })
-
-      if (questionsError) {
-        console.error('Question fetch error:', questionsError)
-        return
-      }
-
-      setQuestionCount(questions.length)
-
-      const current = questions.find(
-        q => q.question_order === room.current_question
-      )
-
-      setCurrentQuestionText(current ? current.question_text : 'No question found')
-    }
-
-    fetchPlayers()
-    fetchRoomState()
-
-    const playersChannel = supabase
-      .channel(`players-room-${roomId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'players',
-          filter: `room_id=eq.${roomId}`
-        },
-        () => fetchPlayers()
-      )
-      .subscribe()
-
-    const roomChannel = supabase
-      .channel(`room-state-${roomId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'rooms',
-          filter: `id=eq.${roomId}`
-        },
-        () => fetchRoomState()
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(playersChannel)
-      supabase.removeChannel(roomChannel)
-    }
+    return () => clearInterval(interval)
   }, [roomId])
 
   const startGame = async () => {
@@ -167,8 +147,6 @@ export default function HostPage() {
       }
     }
 
-    setRoomId(currentRoomId)
-
     // 2. Check if room already has questions
     const { count, error: countError } = await supabase
       .from('questions')
@@ -181,7 +159,7 @@ export default function HostPage() {
       return
     }
 
-    // 3. Insert seed questions only if none exist
+    // 3. Insert seed questions if none exist yet
     if (count === 0) {
       for (let i = 0; i < seedQuestions.length; i++) {
         const q = seedQuestions[i]
@@ -220,6 +198,11 @@ export default function HostPage() {
       }
     }
 
+    // 4. Store room id and immediately refresh host state
+    setRoomId(currentRoomId)
+    await fetchPlayers(currentRoomId)
+    await fetchRoomState(currentRoomId)
+
     alert('Game started')
   }
 
@@ -229,24 +212,55 @@ export default function HostPage() {
       return
     }
 
-    if (currentQuestion + 1 >= questionCount) {
+    // Always read the true latest room state from the database
+    const { data: room, error: roomError } = await supabase
+      .from('rooms')
+      .select('current_question')
+      .eq('id', roomId)
+      .maybeSingle()
+
+    if (roomError) {
+      console.error('Room fetch error:', roomError)
+      alert(`Could not load room state: ${roomError.message}`)
+      return
+    }
+
+    const { data: questions, error: questionsError } = await supabase
+      .from('questions')
+      .select('id, question_order')
+      .eq('room_id', roomId)
+      .order('question_order', { ascending: true })
+
+    if (questionsError) {
+      console.error('Questions fetch error:', questionsError)
+      alert(`Could not load questions: ${questionsError.message}`)
+      return
+    }
+
+    const totalQuestions = questions.length
+    const nextIndex = room.current_question + 1
+
+    if (nextIndex >= totalQuestions) {
       alert('No more questions in this room')
       return
     }
 
-    const { error } = await supabase
+    const { error: updateError } = await supabase
       .from('rooms')
       .update({
-        current_question: currentQuestion + 1,
+        current_question: nextIndex,
         status: 'question'
       })
       .eq('id', roomId)
 
-    if (error) {
-      console.error('Next question error:', error)
-      alert(`Could not move to next question: ${error.message}`)
+    if (updateError) {
+      console.error('Next question error:', updateError)
+      alert(`Could not move to next question: ${updateError.message}`)
       return
     }
+
+    // immediately refresh host page state
+    await fetchRoomState(roomId)
   }
 
   return (
