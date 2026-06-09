@@ -88,7 +88,7 @@ export default function JoinPage() {
   return (
     <div className="container">
       <div className="card">
-        <h1>Survey Stair Climb</h1>
+        <h1>Crowd Climb</h1>
         <p>Join a live room.</p>
 
         <input
