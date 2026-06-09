@@ -7,10 +7,10 @@ export default function PlayerPage() {
   const [selected, setSelected] = useState(null)
   const [question, setQuestion] = useState(null)
   const [roomId, setRoomId] = useState(null)
+  const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
     const loadQuestion = async () => {
-      // 1. Find room
       const { data: room, error: roomError } = await supabase
         .from('rooms')
         .select('id, current_question, status')
@@ -29,7 +29,6 @@ export default function PlayerPage() {
 
       setRoomId(room.id)
 
-      // 2. Find current question for this room
       const { data: questionRow, error: questionError } = await supabase
         .from('questions')
         .select('id, question_text, question_order')
@@ -47,7 +46,6 @@ export default function PlayerPage() {
         return
       }
 
-      // 3. Find answers for that question
       const { data: answers, error: answersError } = await supabase
         .from('answers')
         .select('id, answer_text, answer_order')
@@ -64,18 +62,24 @@ export default function PlayerPage() {
         text: questionRow.question_text,
         answers: answers.map(a => a.answer_text)
       })
+
+      // reset local state when a new question loads
+      setSelected(null)
+      setSubmitted(false)
     }
 
     loadQuestion()
   }, [roomCode])
 
   const submitAnswer = async () => {
-    if (!selected || !question || !roomId) return
+    if (!selected || !question || !roomId || submitted) return
+
+    const nickname = localStorage.getItem('nickname')
 
     const { error } = await supabase.from('submissions').insert({
       room_id: roomId,
       question_id: question.id,
-      nickname: localStorage.getItem('nickname'),
+      nickname: nickname,
       answer: selected
     })
 
@@ -85,7 +89,7 @@ export default function PlayerPage() {
       return
     }
 
-    alert('Answer submitted!')
+    setSubmitted(true)
   }
 
   if (!question) {
@@ -105,22 +109,31 @@ export default function PlayerPage() {
         <h1>Room {roomCode}</h1>
         <h2>{question.text}</h2>
 
-        {question.answers.map(answer => (
-          <div
-            key={answer}
-            className="option"
-            onClick={() => setSelected(answer)}
-            style={{
-              background: selected === answer ? '#2563eb' : '#eef4ff',
-              color: selected === answer ? 'white' : '#1f2937'
-            }}
-          >
-            {answer}
-          </div>
-        ))}
+        {submitted ? (
+          <p><strong>Answer submitted. Waiting for the next question...</strong></p>
+        ) : (
+          <>
+            {question.answers.map(answer => (
+              <div
+                key={answer}
+                className="option"
+                onClick={() => setSelected(answer)}
+                style={{
+                  background: selected === answer ? '#2563eb' : '#eef4ff',
+                  color: selected === answer ? 'white' : '#1f2937',
+                  cursor: 'pointer'
+                }}
+              >
+                {answer}
+              </div>
+            ))}
 
-        <br />
-        <button onClick={submitAnswer}>Submit Selected Answer</button>
+            <br />
+            <button onClick={submitAnswer} disabled={!selected}>
+              Submit Selected Answer
+            </button>
+          </>
+        )}
       </div>
     </div>
   )
