@@ -1,87 +1,21 @@
-body{font-family:Arial,sans-serif;background:#f4f7fb;margin:0;color:#1f2937}
-.container{max-width:1200px;margin:auto;padding:20px}
-.card{background:white;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid #d7deea}
-button{background:#2563eb;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
-input{padding:10px;border-radius:10px;border:1px solid #d7deea}
-.option{padding:14px;border-radius:12px;border:1px solid #bfd3ff;background:#eef4ff;margin-top:10px;cursor:pointer}
-.stairs{display:flex;gap:16px;align-items:flex-end;margin-top:20px}
-.step{width:60px;height:28px;background:#e5e7eb;border-radius:8px;margin-top:5px}
-.step.on{background:#2563eb}
-
 .stairsHost {
   display: flex;
   align-items: flex-end;
   gap: 14px;
   overflow-x: auto;
   min-height: 320px;
-  padding-top: 10px;
+  padding: 20px 20px 12px 20px;
 }
 
 .lane {
   min-width: 72px;
   text-align: center;
-}
-
-.label {
-  font-size: 12px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.steps {
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 6px;
-}
-
-.step {
-  width: 72px;
-  height: 34px;
-  border-radius: 8px;
-  background: #e5e7eb;
-  position: relative;
-}
-
-.step.on {
-  background: linear-gradient(90deg, #93c5fd, #2563eb);
-}
-
-.leader {
-  outline: 3px solid #d97706;
-  border-radius: 8px;
-  padding: 4px;
-}
-
-.token {
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #1d4ed8;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-
-  .stairsHost {
-  display: flex;
-  align-items: flex-end;
-  gap: 14px;
-  overflow-x: auto;
-  min-height: 320px;
-  padding: 16px 12px 12px 12px;
-}
-
-.lane {
-  min-width: 72px;
-  text-align: center;
-  padding: 6px;
+  padding: 8px;
   border: 3px solid transparent;
-  border-radius: 12px;
+  border-radius: 14px;
   box-sizing: border-box;
+  background: transparent;
+  flex-shrink: 0;
 }
 
 .label {
@@ -110,6 +44,7 @@ input{padding:10px;border-radius:10px;border:1px solid #d7deea}
 
 .leader {
   border-color: #d97706;
+  background: #fffaf3;
 }
 
 .token {
@@ -125,7 +60,5 @@ input{padding:10px;border-radius:10px;border:1px solid #d7deea}
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  font-weight: 700;
-}
   font-weight: 700;
 }
