@@ -1,14 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function HostPage(){
-  const [roomCode] = useState(String(Math.floor(1000 + Math.random() * 9000)))
-  const [players,setPlayers] = useState([])
-
-  
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-
 export default function HostPage() {
   const [roomCode] = useState(String(Math.floor(1000 + Math.random() * 9000)))
   const [players, setPlayers] = useState([])
@@ -67,20 +59,6 @@ export default function HostPage() {
 
         <button style={{ marginLeft: 10 }}>Reveal</button>
         <button style={{ marginLeft: 10 }}>Next Question</button>
-      </div>
-
-      <div className="card">
-        <h2>Connected Players</h2>
-        {players.map(player => (
-          <div key={player.id}>{player.nickname}</div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-        <button style={{marginLeft:10}}>Reveal</button>
-        <button style={{marginLeft:10}}>Next Question</button>
       </div>
 
       <div className="card">
