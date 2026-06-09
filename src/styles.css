@@ -1,0 +1,9 @@
+body{font-family:Arial,sans-serif;background:#f4f7fb;margin:0;color:#1f2937}
+.container{max-width:1200px;margin:auto;padding:20px}
+.card{background:white;border-radius:16px;padding:20px;margin-bottom:16px;border:1px solid #d7deea}
+button{background:#2563eb;color:#fff;border:none;padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer}
+input{padding:10px;border-radius:10px;border:1px solid #d7deea}
+.option{padding:14px;border-radius:12px;border:1px solid #bfd3ff;background:#eef4ff;margin-top:10px;cursor:pointer}
+.stairs{display:flex;gap:16px;align-items:flex-end;margin-top:20px}
+.step{width:60px;height:28px;background:#e5e7eb;border-radius:8px;margin-top:5px}
+.step.on{background:#2563eb}
