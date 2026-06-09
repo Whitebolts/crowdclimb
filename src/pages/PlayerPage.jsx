@@ -154,19 +154,20 @@ export default function PlayerPage() {
 
   // End-of-game screen
   if (roomStatus === 'finished') {
-    return (
-      <div className="container">
-        <div className="card">
-          <h1>Room {roomCode}</h1>
-          <h2>Game finished</h2>
-          <p>The game has ended. You can return to the join page to enter a new room code.</p>
-          <button onClick={returnToJoinPage}>
-            Return to Join Page
-          </button>
-        </div>
+  return (
+    <div className="container">
+      <div className="card">
+        <h1>Crowd Climb</h1>
+        <h2>Game finished</h2>
+        <p>Thanks for playing Crowd Climb.</p>
+        <p>Watch for the next room code from your host.</p>
+        <button onClick={returnToJoinPage}>
+          Return to Join Page
+        </button>
       </div>
-    )
-  }
+    </div>
+  )
+}
 
   if (!question) {
     return (
