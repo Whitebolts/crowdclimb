@@ -2,8 +2,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
+function generateRoomCode() {
+  return String(Math.floor(1000 + Math.random() * 9000))
+}
+
 export default function HostPage() {
-  const [roomCode] = useState(String(Math.floor(1000 + Math.random() * 9000)))
+  const [roomCode, setRoomCode] = useState(generateRoomCode())
   const [roomId, setRoomId] = useState(null)
   const [players, setPlayers] = useState([])
   const [currentQuestion, setCurrentQuestion] = useState(0)
@@ -19,7 +23,7 @@ export default function HostPage() {
   const [showQuestionBuilder, setShowQuestionBuilder] = useState(true)
 
   const fetchPlayers = async (targetRoomId) => {
-    if (!targetRoomId) return 
+    if (!targetRoomId) return
 
     const { data, error } = await supabase
       .from('players')
@@ -67,10 +71,7 @@ export default function HostPage() {
 
     setQuestionCount(questions.length)
 
-    const current = questions.find(
-      q => q.question_order === room.current_question
-    )
-
+    const current = questions.find(q => q.question_order === room.current_question)
     setCurrentQuestionText(current ? current.question_text : 'No question found')
   }
 
@@ -120,11 +121,7 @@ export default function HostPage() {
     }
 
     runRefresh()
-
-    const interval = setInterval(() => {
-      runRefresh()
-    }, 2000)
-
+    const interval = setInterval(runRefresh, 2000)
     return () => clearInterval(interval)
   }, [roomId, currentQuestion])
 
@@ -137,14 +134,7 @@ export default function HostPage() {
       return
     }
 
-    setCustomQuestions(prev => [
-      ...prev,
-      {
-        question_text: prompt,
-        answers
-      }
-    ])
-
+    setCustomQuestions(prev => [...prev, { question_text: prompt, answers }])
     setDraftQuestion('')
     setDraftAnswers(['', '', '', ''])
   }
@@ -159,17 +149,6 @@ export default function HostPage() {
       return false
     }
 
-    const { error: deleteQuestionsError } = await supabase
-      .from('questions')
-      .delete()
-      .eq('room_id', targetRoomId)
-
-    if (deleteQuestionsError) {
-      console.error('Question delete error:', deleteQuestionsError)
-      alert(`Could not reset previous questions: ${deleteQuestionsError.message}`)
-      return false
-    }
-
     const { error: deleteSubmissionsError } = await supabase
       .from('submissions')
       .delete()
@@ -178,6 +157,17 @@ export default function HostPage() {
     if (deleteSubmissionsError) {
       console.error('Submissions delete error:', deleteSubmissionsError)
       alert(`Could not clear previous submissions: ${deleteSubmissionsError.message}`)
+      return false
+    }
+
+    const { error: deleteQuestionsError } = await supabase
+      .from('questions')
+      .delete()
+      .eq('room_id', targetRoomId)
+
+    if (deleteQuestionsError) {
+      console.error('Question delete error:', deleteQuestionsError)
+      alert(`Could not reset previous questions: ${deleteQuestionsError.message}`)
       return false
     }
 
@@ -248,27 +238,11 @@ export default function HostPage() {
     return true
   }
 
-  const ensureRoom = async () => {
-    const { data: existingRoom, error: lookupError } = await supabase
-      .from('rooms')
-      .select('id')
-      .eq('room_code', roomCode)
-      .maybeSingle()
-
-    if (lookupError) {
-      console.error('Room lookup error:', lookupError)
-      alert(`Room lookup error: ${lookupError.message}`)
-      return null
-    }
-
-    if (existingRoom) {
-      return existingRoom.id
-    }
-
+  const createFreshRoom = async (newCode) => {
     const { data: createdRoom, error: insertRoomError } = await supabase
       .from('rooms')
       .insert({
-        room_code: roomCode,
+        room_code: newCode,
         status: 'question',
         current_question: 0
       })
@@ -290,21 +264,23 @@ export default function HostPage() {
       return
     }
 
-    const currentRoomId = await ensureRoom()
-    if (!currentRoomId) return
+    let currentRoomId = roomId
 
-    const { error: updateRoomError } = await supabase
-      .from('rooms')
-      .update({
-        status: 'question',
-        current_question: 0
-      })
-      .eq('id', currentRoomId)
+    if (!currentRoomId) {
+      currentRoomId = await createFreshRoom(roomCode)
+      if (!currentRoomId) return
+      setRoomId(currentRoomId)
+    } else {
+      const { error: updateRoomError } = await supabase
+        .from('rooms')
+        .update({ status: 'question', current_question: 0 })
+        .eq('id', currentRoomId)
 
-    if (updateRoomError) {
-      console.error('Room update error:', updateRoomError)
-      alert(`Could not start game: ${updateRoomError.message}`)
-      return
+      if (updateRoomError) {
+        console.error('Room update error:', updateRoomError)
+        alert(`Could not start game: ${updateRoomError.message}`)
+        return
+      }
     }
 
     const scoresReset = await resetScoresForRoom(currentRoomId)
@@ -313,7 +289,6 @@ export default function HostPage() {
     const seeded = await seedRoomWithCurrentQuestions(currentRoomId)
     if (!seeded) return
 
-    setRoomId(currentRoomId)
     setRevealResult(null)
     setShowQuestionBuilder(false)
 
@@ -354,19 +329,13 @@ export default function HostPage() {
 
     const { data: questionRow, error: questionError } = await supabase
       .from('questions')
-      .select('id, question_text')
+      .select('id')
       .eq('room_id', roomId)
       .eq('question_order', room.current_question)
       .maybeSingle()
 
-    if (questionError) {
-      console.error('Question fetch error:', questionError)
-      alert(`Could not load question: ${questionError.message}`)
-      return
-    }
-
-    if (!questionRow) {
-      alert('No question found')
+    if (questionError || !questionRow) {
+      alert(questionError ? `Could not load question: ${questionError.message}` : 'No question found')
       return
     }
 
@@ -377,7 +346,6 @@ export default function HostPage() {
       .eq('question_id', questionRow.id)
 
     if (submissionsError) {
-      console.error('Submission fetch error:', submissionsError)
       alert(`Could not load submissions: ${submissionsError.message}`)
       return
     }
@@ -393,10 +361,7 @@ export default function HostPage() {
     })
 
     const max = Math.max(...Object.values(counts))
-    const winningAnswers = Object.keys(counts).filter(
-      answer => counts[answer] === max
-    )
-
+    const winningAnswers = Object.keys(counts).filter(answer => counts[answer] === max)
     const winningPlayerIds = currentSubmissions
       .filter(sub => winningAnswers.includes(sub.answer))
       .map(sub => sub.player_id)
@@ -407,7 +372,6 @@ export default function HostPage() {
       .eq('room_id', roomId)
 
     if (playersError) {
-      console.error('Players fetch error:', playersError)
       alert(`Could not load players: ${playersError.message}`)
       return
     }
@@ -420,7 +384,6 @@ export default function HostPage() {
           .eq('id', player.id)
 
         if (updateError) {
-          console.error('Player score update error:', updateError)
           alert(`Could not update score: ${updateError.message}`)
           return
         }
@@ -435,63 +398,42 @@ export default function HostPage() {
       .eq('id', roomId)
 
     if (roomUpdateError) {
-      console.error('Room status update error:', roomUpdateError)
       alert(`Could not update room status: ${roomUpdateError.message}`)
       return
     }
 
-    setRevealResult({
-      winningAnswers,
-      counts,
-      winningPlayerIds
-    })
-
+    setRevealResult({ winningAnswers, counts, winningPlayerIds })
     setSubmissions(currentSubmissions)
-
     await fetchPlayers(roomId)
     await fetchRoomState(roomId)
   }
 
   const restartGame = async () => {
-    if (!roomId) {
-      alert('Start the game first')
-      return
-    }
-
     if (customQuestions.length === 0) {
       alert('Add at least one custom question before restarting the game.')
       return
     }
 
-    const scoresReset = await resetScoresForRoom(roomId)
-    if (!scoresReset) return
+    const newCode = generateRoomCode()
+    const newRoomId = await createFreshRoom(newCode)
+    if (!newRoomId) return
 
-    const reseeded = await seedRoomWithCurrentQuestions(roomId)
-    if (!reseeded) return
+    const seeded = await seedRoomWithCurrentQuestions(newRoomId)
+    if (!seeded) return
 
-    const { error: roomResetError } = await supabase
-      .from('rooms')
-      .update({
-        current_question: 0,
-        status: 'question'
-      })
-      .eq('id', roomId)
-
-    if (roomResetError) {
-      console.error('Room reset error:', roomResetError)
-      alert(`Could not restart game: ${roomResetError.message}`)
-      return
-    }
-
+    setRoomCode(newCode)
+    setRoomId(newRoomId)
+    setPlayers([])
     setRevealResult(null)
     setSubmissions([])
     setShowQuestionBuilder(false)
+    setCurrentQuestion(0)
+    setRoomStatus('question')
 
-    await fetchPlayers(roomId)
-    await fetchRoomState(roomId)
-    await fetchSubmissions(roomId, 0)
+    await fetchRoomState(newRoomId)
+    await fetchSubmissions(newRoomId, 0)
 
-    alert('Game restarted using the current custom question set')
+    alert(`Game restarted with a new room code: ${newCode}. Players will need to rejoin.`)
   }
 
   const resetGame = async () => {
@@ -508,7 +450,6 @@ export default function HostPage() {
         .eq('id', roomId)
 
       if (deleteRoomError) {
-        console.error('Room delete error:', deleteRoomError)
         alert(`Could not reset room: ${deleteRoomError.message}`)
         return
       }
@@ -535,7 +476,6 @@ export default function HostPage() {
       .maybeSingle()
 
     if (roomError) {
-      console.error('Room fetch error:', roomError)
       alert(`Could not load room state: ${roomError.message}`)
       return
     }
@@ -547,29 +487,22 @@ export default function HostPage() {
       .order('question_order', { ascending: true })
 
     if (questionsError) {
-      console.error('Questions fetch error:', questionsError)
       alert(`Could not load questions: ${questionsError.message}`)
       return
     }
 
-    const totalQuestions = questions.length
     const nextIndex = room.current_question + 1
-
-    if (nextIndex >= totalQuestions) {
+    if (nextIndex >= questions.length) {
       alert('No more questions in this room')
       return
     }
 
     const { error: updateError } = await supabase
       .from('rooms')
-      .update({
-        current_question: nextIndex,
-        status: 'question'
-      })
+      .update({ current_question: nextIndex, status: 'question' })
       .eq('id', roomId)
 
     if (updateError) {
-      console.error('Next question error:', updateError)
       alert(`Could not move to next question: ${updateError.message}`)
       return
     }
@@ -585,18 +518,12 @@ export default function HostPage() {
     return a.nickname.localeCompare(b.nickname)
   })
 
-  const highestScore =
-    sortedPlayers.length > 0 ? Math.max(...sortedPlayers.map(p => p.score)) : 0
-
-  const winnerNames = sortedPlayers
-    .filter(player => player.score === highestScore)
-    .map(player => player.nickname)
+  const highestScore = sortedPlayers.length > 0 ? Math.max(...sortedPlayers.map(p => p.score)) : 0
+  const winnerNames = sortedPlayers.filter(player => player.score === highestScore).map(player => player.nickname)
 
   const submittedMap = {}
   submissions.forEach(sub => {
-    if (sub.player_id) {
-      submittedMap[sub.player_id] = sub.answer
-    }
+    if (sub.player_id) submittedMap[sub.player_id] = sub.answer
   })
 
   const isGameFinished = roomStatus === 'finished' && questionCount > 0
@@ -609,19 +536,10 @@ export default function HostPage() {
 
         <button onClick={startGame}>Start Game</button>
         <button style={{ marginLeft: 10 }} onClick={reveal}>Reveal</button>
-        <button
-          style={{ marginLeft: 10 }}
-          onClick={nextQuestion}
-          disabled={roomStatus !== 'reveal'}
-        >
-          Next Question
-        </button>
+        <button style={{ marginLeft: 10 }} onClick={nextQuestion} disabled={roomStatus !== 'reveal'}>Next Question</button>
         <button style={{ marginLeft: 10 }} onClick={restartGame}>Restart Game</button>
         <button style={{ marginLeft: 10 }} onClick={resetGame}>Reset</button>
-        <button
-          style={{ marginLeft: 10 }}
-          onClick={() => setShowQuestionBuilder(prev => !prev)}
-        >
+        <button style={{ marginLeft: 10 }} onClick={() => setShowQuestionBuilder(prev => !prev)}>
           {showQuestionBuilder ? 'Hide Questions' : 'Show Questions'}
         </button>
       </div>
@@ -629,36 +547,13 @@ export default function HostPage() {
       {showQuestionBuilder && (
         <div className="card">
           <h2>Question Builder</h2>
-          <p>
-            Add your own room questions below. There are no stock fallback questions now, so at least one custom question is required.
-          </p>
+          <p>Add your own room questions below. There are no stock fallback questions now, so at least one custom question is required.</p>
 
-          <textarea
-            value={draftQuestion}
-            onChange={(e) => setDraftQuestion(e.target.value)}
-            placeholder="Enter question prompt"
-          />
-
-          <input
-            value={draftAnswers[0]}
-            onChange={(e) => setDraftAnswers(prev => [e.target.value, prev[1], prev[2], prev[3]])}
-            placeholder="Answer 1"
-          />
-          <input
-            value={draftAnswers[1]}
-            onChange={(e) => setDraftAnswers(prev => [prev[0], e.target.value, prev[2], prev[3]])}
-            placeholder="Answer 2"
-          />
-          <input
-            value={draftAnswers[2]}
-            onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], e.target.value, prev[3]])}
-            placeholder="Answer 3 (optional)"
-          />
-          <input
-            value={draftAnswers[3]}
-            onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], prev[2], e.target.value])}
-            placeholder="Answer 4 (optional)"
-          />
+          <textarea value={draftQuestion} onChange={(e) => setDraftQuestion(e.target.value)} placeholder="Enter question prompt" />
+          <input value={draftAnswers[0]} onChange={(e) => setDraftAnswers(prev => [e.target.value, prev[1], prev[2], prev[3]])} placeholder="Answer 1" />
+          <input value={draftAnswers[1]} onChange={(e) => setDraftAnswers(prev => [prev[0], e.target.value, prev[2], prev[3]])} placeholder="Answer 2" />
+          <input value={draftAnswers[2]} onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], e.target.value, prev[3]])} placeholder="Answer 3 (optional)" />
+          <input value={draftAnswers[3]} onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], prev[2], e.target.value])} placeholder="Answer 4 (optional)" />
 
           <button onClick={addQuestionDraft}>Add Question</button>
 
@@ -668,21 +563,10 @@ export default function HostPage() {
               <p style={{ marginTop: 12 }}>No custom questions added yet.</p>
             ) : (
               customQuestions.map((q, index) => (
-                <div
-                  key={index}
-                  className="card"
-                  style={{ marginTop: 12, marginBottom: 0, padding: 14 }}
-                >
-                  <div>
-                    <strong>{index + 1}. {q.question_text}</strong>
-                  </div>
+                <div key={index} className="card" style={{ marginTop: 12, marginBottom: 0, padding: 14 }}>
+                  <div><strong>{index + 1}. {q.question_text}</strong></div>
                   <div style={{ marginTop: 8 }}>{q.answers.join(' • ')}</div>
-                  <button
-                    style={{ marginTop: 10 }}
-                    onClick={() => removeQuestion(index)}
-                  >
-                    Remove
-                  </button>
+                  <button style={{ marginTop: 10 }} onClick={() => removeQuestion(index)}>Remove</button>
                 </div>
               ))
             )}
@@ -692,9 +576,7 @@ export default function HostPage() {
 
       <div className="card">
         <h2>Current Question</h2>
-        <p>
-          Question {questionCount === 0 ? 0 : currentQuestion + 1} / {questionCount}
-        </p>
+        <p>Question {questionCount === 0 ? 0 : currentQuestion + 1} / {questionCount}</p>
         <p>{currentQuestionText || 'Start the game to load questions'}</p>
       </div>
 
@@ -715,19 +597,14 @@ export default function HostPage() {
               {players.map(player => {
                 const submittedAnswer = submittedMap[player.id]
                 const hasSubmitted = Boolean(submittedAnswer)
-
                 return (
                   <tr key={player.id}>
                     <td>{player.nickname}</td>
                     <td>{hasSubmitted ? 'Yes' : 'No'}</td>
-                    <td>
-                      {roomStatus === 'reveal' || roomStatus === 'finished'
-                        ? (submittedAnswer || '—')
-                        : (hasSubmitted ? 'Hidden' : 'Waiting')}
-                    </td>
+                    <td>{roomStatus === 'reveal' || roomStatus === 'finished' ? (submittedAnswer || '—') : (hasSubmitted ? 'Hidden' : 'Waiting')}</td>
                   </tr>
-                )}
-              )}
+                )
+              })}
             </tbody>
           </table>
         )}
@@ -750,15 +627,11 @@ export default function HostPage() {
 
       {isGameFinished && (
         <div className="card" style={{ background: '#fffaf3', borderColor: '#fcd34d' }}>
-          <h2> Game Winner</h2>
+          <h2>🏆 Game Winner</h2>
           {winnerNames.length === 1 ? (
-            <p>
-              <strong>{winnerNames[0]}</strong> wins with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'}!
-            </p>
+            <p><strong>{winnerNames[0]}</strong> wins with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'}!</p>
           ) : (
-            <p>
-              <strong>Tie:</strong> {winnerNames.join(' / ')} with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'} each.
-            </p>
+            <p><strong>Tie:</strong> {winnerNames.join(' / ')} with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'} each.</p>
           )}
         </div>
       )}
@@ -778,14 +651,9 @@ export default function HostPage() {
                     {Array.from({ length: Math.max(questionCount, 1) }).map((_, i) => {
                       const on = i < player.score
                       const showToken = on && i === player.score - 1
-
                       return (
                         <div key={i} className={`step ${on ? 'on' : ''}`}>
-                          {showToken && (
-                            <div className="token">
-                              {player.nickname.slice(0, 2).toUpperCase()}
-                            </div>
-                          )}
+                          {showToken && <div className="token">{player.nickname.slice(0, 2).toUpperCase()}</div>}
                         </div>
                       )
                     })}
