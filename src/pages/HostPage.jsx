@@ -20,6 +20,9 @@ export default function HostPage() {
   const [roomCode] = useState(String(Math.floor(1000 + Math.random() * 9000)))
   const [roomId, setRoomId] = useState(null)
   const [players, setPlayers] = useState([])
+  const [currentQuestion, setCurrentQuestion] = useState(0)
+  const [questionCount, setQuestionCount] = useState(0)
+  const [currentQuestionText, setCurrentQuestionText] = useState('')
 
   useEffect(() => {
     if (!roomId) return
@@ -39,9 +42,46 @@ export default function HostPage() {
       setPlayers(data || [])
     }
 
-    fetchPlayers()
+    const fetchRoomState = async () => {
+      const { data: room, error: roomError } = await supabase
+        .from('rooms')
+        .select('current_question, status')
+        .eq('id', roomId)
+        .maybeSingle()
 
-    const channel = supabase
+      if (roomError) {
+        console.error('Room state fetch error:', roomError)
+        return
+      }
+
+      if (!room) return
+
+      setCurrentQuestion(room.current_question)
+
+      const { data: questions, error: questionsError } = await supabase
+        .from('questions')
+        .select('id, question_text, question_order')
+        .eq('room_id', roomId)
+        .order('question_order', { ascending: true })
+
+      if (questionsError) {
+        console.error('Question fetch error:', questionsError)
+        return
+      }
+
+      setQuestionCount(questions.length)
+
+      const current = questions.find(
+        q => q.question_order === room.current_question
+      )
+
+      setCurrentQuestionText(current ? current.question_text : 'No question found')
+    }
+
+    fetchPlayers()
+    fetchRoomState()
+
+    const playersChannel = supabase
       .channel(`players-room-${roomId}`)
       .on(
         'postgres_changes',
@@ -55,8 +95,23 @@ export default function HostPage() {
       )
       .subscribe()
 
+    const roomChannel = supabase
+      .channel(`room-state-${roomId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'rooms',
+          filter: `id=eq.${roomId}`
+        },
+        () => fetchRoomState()
+      )
+      .subscribe()
+
     return () => {
-      supabase.removeChannel(channel)
+      supabase.removeChannel(playersChannel)
+      supabase.removeChannel(roomChannel)
     }
   }, [roomId])
 
@@ -114,7 +169,7 @@ export default function HostPage() {
 
     setRoomId(currentRoomId)
 
-    // 2. Check if this room already has questions
+    // 2. Check if room already has questions
     const { count, error: countError } = await supabase
       .from('questions')
       .select('*', { count: 'exact', head: true })
@@ -126,7 +181,7 @@ export default function HostPage() {
       return
     }
 
-    // 3. Insert seed questions if none exist yet
+    // 3. Insert seed questions only if none exist
     if (count === 0) {
       for (let i = 0; i < seedQuestions.length; i++) {
         const q = seedQuestions[i]
@@ -168,6 +223,32 @@ export default function HostPage() {
     alert('Game started')
   }
 
+  const nextQuestion = async () => {
+    if (!roomId) {
+      alert('Start the game first')
+      return
+    }
+
+    if (currentQuestion + 1 >= questionCount) {
+      alert('No more questions in this room')
+      return
+    }
+
+    const { error } = await supabase
+      .from('rooms')
+      .update({
+        current_question: currentQuestion + 1,
+        status: 'question'
+      })
+      .eq('id', roomId)
+
+    if (error) {
+      console.error('Next question error:', error)
+      alert(`Could not move to next question: ${error.message}`)
+      return
+    }
+  }
+
   return (
     <div className="container">
       <div className="card">
@@ -178,8 +259,21 @@ export default function HostPage() {
           Start Game
         </button>
 
-        <button style={{ marginLeft: 10 }}>Reveal</button>
-        <button style={{ marginLeft: 10 }}>Next Question</button>
+        <button style={{ marginLeft: 10 }}>
+          Reveal
+        </button>
+
+        <button style={{ marginLeft: 10 }} onClick={nextQuestion}>
+          Next Question
+        </button>
+      </div>
+
+      <div className="card">
+        <h2>Current Question</h2>
+        <p>
+          Question {questionCount === 0 ? 0 : currentQuestion + 1} / {questionCount}
+        </p>
+        <p>{currentQuestionText || 'Start the game to load questions'}</p>
       </div>
 
       <div className="card">
