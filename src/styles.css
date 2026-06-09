@@ -1,10 +1,98 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f4f7fb;
+  margin: 0;
+  color: #1f2937;
+}
+
+.container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 20px;
+}
+
+.card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  border: 1px solid #d7deea;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+button {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.95;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+input,
+textarea,
+select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #d7deea;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.option {
+  padding: 14px;
+  border-radius: 12px;
+  border: 1px solid #bfd3ff;
+  background: #eef4ff;
+  margin-top: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.option:hover {
+  background: #dfeaff;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #d7deea;
+  text-align: left;
+}
+
+.table th {
+  font-weight: 700;
+}
+
 .stairsHost {
   display: flex;
   align-items: flex-end;
   gap: 14px;
   overflow-x: auto;
   min-height: 320px;
-  padding: 20px 20px 12px 20px;
+  padding: 20px;
 }
 
 .lane {
@@ -61,4 +149,28 @@
   justify-content: center;
   font-size: 11px;
   font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .container {
+    padding: 14px;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .stairsHost {
+    min-height: 260px;
+    padding: 16px;
+  }
+
+  .lane {
+    min-width: 64px;
+  }
+
+  .step {
+    width: 64px;
+    height: 32px;
+  }
 }
