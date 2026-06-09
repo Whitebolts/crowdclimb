@@ -16,7 +16,7 @@ const starterQuestions = [
     answers: ['Summer', 'Fall', 'Winter', 'Spring']
   }
 ]
-
+  
 export default function HostPage() {
   const [roomCode] = useState(String(Math.floor(1000 + Math.random() * 9000)))
   const [roomId, setRoomId] = useState(null)
