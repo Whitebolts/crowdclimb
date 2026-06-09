@@ -2,21 +2,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-const starterQuestions = [
-  {
-    question_text: 'Which superhero would this room choose most often?',
-    answers: ['Spider-Man', 'Superman', 'Batman', 'Wonder Woman']
-  },
-  {
-    question_text: 'Which drink would most people choose?',
-    answers: ['Coffee', 'Tea', 'Water', 'Pop']
-  },
-  {
-    question_text: 'Which season feels shortest?',
-    answers: ['Summer', 'Fall', 'Winter', 'Spring']
-  }
-]
-  
 export default function HostPage() {
   const [roomCode] = useState(String(Math.floor(1000 + Math.random() * 9000)))
   const [roomId, setRoomId] = useState(null)
@@ -32,9 +17,6 @@ export default function HostPage() {
   const [draftAnswers, setDraftAnswers] = useState(['', '', '', ''])
   const [customQuestions, setCustomQuestions] = useState([])
   const [showQuestionBuilder, setShowQuestionBuilder] = useState(true)
-
-  const usingQuestions =
-    customQuestions.length > 0 ? customQuestions : starterQuestions
 
   const fetchPlayers = async (targetRoomId) => {
     if (!targetRoomId) return
@@ -171,8 +153,111 @@ export default function HostPage() {
     setCustomQuestions(prev => prev.filter((_, i) => i !== index))
   }
 
+  const seedRoomWithCurrentQuestions = async (targetRoomId) => {
+    if (customQuestions.length === 0) {
+      alert('Add at least one custom question before starting or restarting the game.')
+      return false
+    }
+
+    // remove old questions for this room
+    const { error: deleteQuestionsError } = await supabase
+      .from('questions')
+      .delete()
+      .eq('room_id', targetRoomId)
+
+    if (deleteQuestionsError) {
+      console.error('Question delete error:', deleteQuestionsError)
+      alert(`Could not reset previous questions: ${deleteQuestionsError.message}`)
+      return false
+    }
+
+    // clear old submissions because question ids change
+    const { error: deleteSubmissionsError } = await supabase
+      .from('submissions')
+      .delete()
+      .eq('room_id', targetRoomId)
+
+    if (deleteSubmissionsError) {
+      console.error('Submissions delete error:', deleteSubmissionsError)
+      alert(`Could not clear previous submissions: ${deleteSubmissionsError.message}`)
+      return false
+    }
+
+    // insert the current custom question set
+    for (let i = 0; i < customQuestions.length; i++) {
+      const q = customQuestions[i]
+
+      const { data: insertedQuestion, error: questionError } = await supabase
+        .from('questions')
+        .insert({
+          room_id: targetRoomId,
+          question_text: q.question_text,
+          question_order: i
+        })
+        .select()
+        .single()
+
+      if (questionError) {
+        console.error('Question insert error:', questionError)
+        alert(`Question insert error: ${questionError.message}`)
+        return false
+      }
+
+      const answerRows = q.answers.map((answer, index) => ({
+        question_id: insertedQuestion.id,
+        answer_text: answer,
+        answer_order: index
+      }))
+
+      const { error: answersError } = await supabase
+        .from('answers')
+        .insert(answerRows)
+
+      if (answersError) {
+        console.error('Answer insert error:', answersError)
+        alert(`Answer insert error: ${answersError.message}`)
+        return false
+      }
+    }
+
+    return true
+  }
+
+  const resetScoresForRoom = async (targetRoomId) => {
+    const { data: roomPlayers, error: roomPlayersError } = await supabase
+      .from('players')
+      .select('id')
+      .eq('room_id', targetRoomId)
+
+    if (roomPlayersError) {
+      console.error('Players lookup error:', roomPlayersError)
+      alert(`Could not reset player scores: ${roomPlayersError.message}`)
+      return false
+    }
+
+    for (const player of roomPlayers || []) {
+      const { error: scoreResetError } = await supabase
+        .from('players')
+        .update({ score: 0 })
+        .eq('id', player.id)
+
+      if (scoreResetError) {
+        console.error('Score reset error:', scoreResetError)
+        alert(`Could not reset player scores: ${scoreResetError.message}`)
+        return false
+      }
+    }
+
+    return true
+  }
+
   const startGame = async () => {
     let currentRoomId
+
+    if (customQuestions.length === 0) {
+      alert('Add at least one custom question before starting the game.')
+      return
+    }
 
     const { data: existingRoom, error: lookupError } = await supabase
       .from('rooms')
@@ -222,88 +307,11 @@ export default function HostPage() {
       }
     }
 
-    const { data: roomPlayers, error: roomPlayersError } = await supabase
-      .from('players')
-      .select('id')
-      .eq('room_id', currentRoomId)
+    const scoresReset = await resetScoresForRoom(currentRoomId)
+    if (!scoresReset) return
 
-    if (roomPlayersError) {
-      console.error('Players lookup error:', roomPlayersError)
-      alert(`Could not reset player scores: ${roomPlayersError.message}`)
-      return
-    }
-
-    for (const player of roomPlayers || []) {
-      const { error: scoreResetError } = await supabase
-        .from('players')
-        .update({ score: 0 })
-        .eq('id', player.id)
-
-      if (scoreResetError) {
-        console.error('Score reset error:', scoreResetError)
-        alert(`Could not reset player scores: ${scoreResetError.message}`)
-        return
-      }
-    }
-
-    const { error: deleteQuestionsError } = await supabase
-      .from('questions')
-      .delete()
-      .eq('room_id', currentRoomId)
-
-    if (deleteQuestionsError) {
-      console.error('Question delete error:', deleteQuestionsError)
-      alert(`Could not reset previous questions: ${deleteQuestionsError.message}`)
-      return
-    }
-
-    for (let i = 0; i < usingQuestions.length; i++) {
-      const q = usingQuestions[i]
-
-      const { data: insertedQuestion, error: questionError } = await supabase
-        .from('questions')
-        .insert({
-          room_id: currentRoomId,
-          question_text: q.question_text,
-          question_order: i
-        })
-        .select()
-        .single()
-
-      if (questionError) {
-        console.error('Question insert error:', questionError)
-        alert(`Question insert error: ${questionError.message}`)
-        return
-      }
-
-      const answerRows = q.answers.map((answer, index) => ({
-        question_id: insertedQuestion.id,
-        answer_text: answer,
-        answer_order: index
-      }))
-
-      const { error: answersError } = await supabase
-        .from('answers')
-        .insert(answerRows)
-
-      if (answersError) {
-        console.error('Answer insert error:', answersError)
-        alert(`Answer insert error: ${answersError.message}`)
-        return
-      }
-    }
-
-    // clear old submissions and start fresh
-    const { error: deleteSubmissionsError } = await supabase
-      .from('submissions')
-      .delete()
-      .eq('room_id', currentRoomId)
-
-    if (deleteSubmissionsError) {
-      console.error('Submissions delete error:', deleteSubmissionsError)
-      alert(`Could not clear previous submissions: ${deleteSubmissionsError.message}`)
-      return
-    }
+    const seeded = await seedRoomWithCurrentQuestions(currentRoomId)
+    if (!seeded) return
 
     setRoomId(currentRoomId)
     setRevealResult(null)
@@ -450,31 +458,16 @@ export default function HostPage() {
       return
     }
 
-    // reset scores
-    for (const player of players) {
-      const { error: scoreResetError } = await supabase
-        .from('players')
-        .update({ score: 0 })
-        .eq('id', player.id)
-
-      if (scoreResetError) {
-        console.error('Score reset error:', scoreResetError)
-        alert(`Could not reset player scores: ${scoreResetError.message}`)
-        return
-      }
-    }
-
-    // clear submissions but keep current questions/answers
-    const { error: deleteSubmissionsError } = await supabase
-      .from('submissions')
-      .delete()
-      .eq('room_id', roomId)
-
-    if (deleteSubmissionsError) {
-      console.error('Submissions delete error:', deleteSubmissionsError)
-      alert(`Could not clear submissions: ${deleteSubmissionsError.message}`)
+    if (customQuestions.length === 0) {
+      alert('Add at least one custom question before restarting the game.')
       return
     }
+
+    const scoresReset = await resetScoresForRoom(roomId)
+    if (!scoresReset) return
+
+    const reseeded = await seedRoomWithCurrentQuestions(roomId)
+    if (!reseeded) return
 
     const { error: roomResetError } = await supabase
       .from('rooms')
@@ -498,7 +491,7 @@ export default function HostPage() {
     await fetchRoomState(roomId)
     await fetchSubmissions(roomId, 0)
 
-    alert('Game restarted using the existing question set')
+    alert('Game restarted using the current custom question set')
   }
 
   const resetGame = async () => {
@@ -637,7 +630,7 @@ export default function HostPage() {
         <div className="card">
           <h2>Question Builder</h2>
           <p>
-            Add your own room questions below. If you leave this blank, the starter stock questions will be used.
+            Add your own room questions below. There are no stock fallback questions now, so at least one custom question is required.
           </p>
 
           <textarea
@@ -671,26 +664,28 @@ export default function HostPage() {
 
           <div style={{ marginTop: 16 }}>
             <strong>Question Set For This Room</strong>
-            {usingQuestions.map((q, index) => (
-              <div
-                key={index}
-                className="card"
-                style={{ marginTop: 12, marginBottom: 0, padding: 14 }}
-              >
-                <div>
-                  <strong>{index + 1}. {q.question_text}</strong>
-                </div>
-                <div style={{ marginTop: 8 }}>{q.answers.join(' • ')}</div>
-                {customQuestions.length > 0 && (
+            {customQuestions.length === 0 ? (
+              <p style={{ marginTop: 12 }}>No custom questions added yet.</p>
+            ) : (
+              customQuestions.map((q, index) => (
+                <div
+                  key={index}
+                  className="card"
+                  style={{ marginTop: 12, marginBottom: 0, padding: 14 }}
+                >
+                  <div>
+                    <strong>{index + 1}. {q.question_text}</strong>
+                  </div>
+                  <div style={{ marginTop: 8 }}>{q.answers.join(' • ')}</div>
                   <button
                     style={{ marginTop: 10 }}
                     onClick={() => removeQuestion(index)}
                   >
                     Remove
                   </button>
-                )}
-              </div>
-            ))}
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}
