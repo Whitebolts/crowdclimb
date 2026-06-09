@@ -1,41 +1,40 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-const seedQuestions = [
-  {
-    question_text: 'Which superhero would this room choose most often?',
-    answers: ['Spider-Man', 'Superman', 'Batman', 'Wonder Woman']
-  },
-  {
-    question_text: 'Which drink would most people choose?',
-    answers: ['Coffee', 'Tea', 'Water', 'Pop']
-  },
-  {
-    question_text: 'Which season feels shortest?',
-    answers: ['Summer', 'Fall', 'Winter', 'Spring']
-  }
-]
-
 export default function HostPage() {
   const [roomCode] = useState(String(Math.floor(1000 + Math.random() * 9000)))
+  const [roomId, setRoomId] = useState(null)
   const [players, setPlayers] = useState([])
 
   useEffect(() => {
+    if (!roomId) return
+
     const fetchPlayers = async () => {
-      const { data } = await supabase.from('players').select('*')
+      const { data, error } = await supabase
+        .from('players')
+        .select('*')
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: true })
+
+      if (error) {
+        console.error('Player fetch error:', error)
+        return
+      }
+
       setPlayers(data || [])
     }
 
     fetchPlayers()
 
     const channel = supabase
-      .channel('players-live')
+      .channel(`players-room-${roomId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'players'
+          table: 'players',
+          filter: `room_id=eq.${roomId}`
         },
         () => fetchPlayers()
       )
@@ -44,12 +43,9 @@ export default function HostPage() {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [])
+  }, [roomId])
 
   const startGame = async () => {
-    // 1. Find or create the room
-    let roomId
-
     const { data: existingRoom, error: lookupError } = await supabase
       .from('rooms')
       .select('id')
@@ -63,7 +59,7 @@ export default function HostPage() {
     }
 
     if (!existingRoom) {
-      const { data: createdRoom, error: insertRoomError } = await supabase
+      const { data: createdRoom, error: insertError } = await supabase
         .from('rooms')
         .insert({
           room_code: roomCode,
@@ -73,80 +69,29 @@ export default function HostPage() {
         .select()
         .single()
 
-      if (insertRoomError) {
-        console.error('Room insert error:', insertRoomError)
-        alert(`Could not start game: ${insertRoomError.message}`)
+      if (insertError) {
+        console.error('Insert error:', insertError)
+        alert(`Could not start game: ${insertError.message}`)
         return
       }
 
-      roomId = createdRoom.id
+      setRoomId(createdRoom.id)
     } else {
-      roomId = existingRoom.id
-
-      const { error: updateRoomError } = await supabase
+      const { error: updateError } = await supabase
         .from('rooms')
         .update({
           status: 'question',
           current_question: 0
         })
-        .eq('id', roomId)
+        .eq('id', existingRoom.id)
 
-      if (updateRoomError) {
-        console.error('Room update error:', updateRoomError)
-        alert(`Could not start game: ${updateRoomError.message}`)
+      if (updateError) {
+        console.error('Update error:', updateError)
+        alert(`Could not start game: ${updateError.message}`)
         return
       }
-    }
 
-    // 2. Check if this room already has questions
-    const { count, error: countError } = await supabase
-      .from('questions')
-      .select('*', { count: 'exact', head: true })
-      .eq('room_id', roomId)
-
-    if (countError) {
-      console.error('Question count error:', countError)
-      alert(`Question count error: ${countError.message}`)
-      return
-    }
-
-    // 3. Insert seed questions if none exist
-    if (count === 0) {
-      for (let i = 0; i < seedQuestions.length; i++) {
-        const q = seedQuestions[i]
-
-        const { data: insertedQuestion, error: questionError } = await supabase
-          .from('questions')
-          .insert({
-            room_id: roomId,
-            question_text: q.question_text,
-            question_order: i
-          })
-          .select()
-          .single()
-
-        if (questionError) {
-          console.error('Question insert error:', questionError)
-          alert(`Question insert error: ${questionError.message}`)
-          return
-        }
-
-        const answerRows = q.answers.map((answer, index) => ({
-          question_id: insertedQuestion.id,
-          answer_text: answer,
-          answer_order: index
-        }))
-
-        const { error: answersError } = await supabase
-          .from('answers')
-          .insert(answerRows)
-
-        if (answersError) {
-          console.error('Answer insert error:', answersError)
-          alert(`Answer insert error: ${answersError.message}`)
-          return
-        }
-      }
+      setRoomId(existingRoom.id)
     }
 
     alert('Game started')
@@ -168,9 +113,13 @@ export default function HostPage() {
 
       <div className="card">
         <h2>Connected Players</h2>
-        {players.map(player => (
-          <div key={player.id}>{player.nickname}</div>
-        ))}
+        {players.length === 0 ? (
+          <p>No players joined this room yet.</p>
+        ) : (
+          players.map(player => (
+            <div key={player.id}>{player.nickname}</div>
+          ))
+        )}
       </div>
     </div>
   )
