@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -221,7 +222,6 @@ export default function HostPage() {
       }
     }
 
-    // Reset scores for players in this room
     const { data: roomPlayers, error: roomPlayersError } = await supabase
       .from('players')
       .select('id')
@@ -246,7 +246,6 @@ export default function HostPage() {
       }
     }
 
-    // Remove old questions for this room
     const { error: deleteQuestionsError } = await supabase
       .from('questions')
       .delete()
@@ -258,7 +257,6 @@ export default function HostPage() {
       return
     }
 
-    // Insert active question set
     for (let i = 0; i < usingQuestions.length; i++) {
       const q = usingQuestions[i]
 
@@ -329,7 +327,7 @@ export default function HostPage() {
       return
     }
 
-    if (room.status === 'reveal') {
+    if (room.status === 'reveal' || room.status === 'finished') {
       alert('This question has already been revealed')
       return
     }
@@ -409,9 +407,11 @@ export default function HostPage() {
       }
     }
 
+    const statusForRoom = room.current_question + 1 >= questionCount ? 'finished' : 'reveal'
+
     const { error: roomUpdateError } = await supabase
       .from('rooms')
-      .update({ status: 'reveal' })
+      .update({ status: statusForRoom })
       .eq('id', roomId)
 
     if (roomUpdateError) {
@@ -503,12 +503,18 @@ export default function HostPage() {
   const highestScore =
     sortedPlayers.length > 0 ? Math.max(...sortedPlayers.map(p => p.score)) : 0
 
+  const winnerNames = sortedPlayers
+    .filter(player => player.score === highestScore)
+    .map(player => player.nickname)
+
   const submittedMap = {}
   submissions.forEach(sub => {
     if (sub.player_id) {
       submittedMap[sub.player_id] = sub.answer
     }
   })
+
+  const isGameFinished = roomStatus === 'finished' && questionCount > 0
 
   return (
     <div className="container">
@@ -626,13 +632,13 @@ export default function HostPage() {
                     <td>{player.nickname}</td>
                     <td>{hasSubmitted ? 'Yes' : 'No'}</td>
                     <td>
-                      {roomStatus === 'reveal'
+                      {roomStatus === 'reveal' || roomStatus === 'finished'
                         ? (submittedAnswer || '—')
                         : (hasSubmitted ? 'Hidden' : 'Waiting')}
                     </td>
                   </tr>
-                )
-              })}
+                )}
+              )}
             </tbody>
           </table>
         )}
@@ -652,6 +658,21 @@ export default function HostPage() {
           </>
         )}
       </div>
+
+      {isGameFinished && (
+        <div className="card" style={{ background: '#fffaf3', borderColor: '#fcd34d' }}>
+          <h2>🏆 Game Winner</h2>
+          {winnerNames.length === 1 ? (
+            <p>
+              <strong>{winnerNames[0]}</strong> wins with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'}!
+            </p>
+          ) : (
+            <p>
+              <strong>Tie:</strong> {winnerNames.join(' / ')} with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'} each.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="card">
         <h2>Live Staircase Leaderboard</h2>
