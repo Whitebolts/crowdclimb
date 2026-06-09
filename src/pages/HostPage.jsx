@@ -1,6 +1,21 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
+const seedQuestions = [
+  {
+    question_text: 'Which superhero would this room choose most often?',
+    answers: ['Spider-Man', 'Superman', 'Batman', 'Wonder Woman']
+  },
+  {
+    question_text: 'Which drink would most people choose?',
+    answers: ['Coffee', 'Tea', 'Water', 'Pop']
+  },
+  {
+    question_text: 'Which season feels shortest?',
+    answers: ['Summer', 'Fall', 'Winter', 'Spring']
+  }
+]
+
 export default function HostPage() {
   const [roomCode] = useState(String(Math.floor(1000 + Math.random() * 9000)))
   const [roomId, setRoomId] = useState(null)
@@ -46,6 +61,9 @@ export default function HostPage() {
   }, [roomId])
 
   const startGame = async () => {
+    let currentRoomId
+
+    // 1. Find or create room
     const { data: existingRoom, error: lookupError } = await supabase
       .from('rooms')
       .select('id')
@@ -59,7 +77,7 @@ export default function HostPage() {
     }
 
     if (!existingRoom) {
-      const { data: createdRoom, error: insertError } = await supabase
+      const { data: createdRoom, error: insertRoomError } = await supabase
         .from('rooms')
         .insert({
           room_code: roomCode,
@@ -69,29 +87,82 @@ export default function HostPage() {
         .select()
         .single()
 
-      if (insertError) {
-        console.error('Insert error:', insertError)
-        alert(`Could not start game: ${insertError.message}`)
+      if (insertRoomError) {
+        console.error('Room insert error:', insertRoomError)
+        alert(`Could not start game: ${insertRoomError.message}`)
         return
       }
 
-      setRoomId(createdRoom.id)
+      currentRoomId = createdRoom.id
     } else {
-      const { error: updateError } = await supabase
+      currentRoomId = existingRoom.id
+
+      const { error: updateRoomError } = await supabase
         .from('rooms')
         .update({
           status: 'question',
           current_question: 0
         })
-        .eq('id', existingRoom.id)
+        .eq('id', currentRoomId)
 
-      if (updateError) {
-        console.error('Update error:', updateError)
-        alert(`Could not start game: ${updateError.message}`)
+      if (updateRoomError) {
+        console.error('Room update error:', updateRoomError)
+        alert(`Could not start game: ${updateRoomError.message}`)
         return
       }
+    }
 
-      setRoomId(existingRoom.id)
+    setRoomId(currentRoomId)
+
+    // 2. Check if this room already has questions
+    const { count, error: countError } = await supabase
+      .from('questions')
+      .select('*', { count: 'exact', head: true })
+      .eq('room_id', currentRoomId)
+
+    if (countError) {
+      console.error('Question count error:', countError)
+      alert(`Question count error: ${countError.message}`)
+      return
+    }
+
+    // 3. Insert seed questions if none exist yet
+    if (count === 0) {
+      for (let i = 0; i < seedQuestions.length; i++) {
+        const q = seedQuestions[i]
+
+        const { data: insertedQuestion, error: questionError } = await supabase
+          .from('questions')
+          .insert({
+            room_id: currentRoomId,
+            question_text: q.question_text,
+            question_order: i
+          })
+          .select()
+          .single()
+
+        if (questionError) {
+          console.error('Question insert error:', questionError)
+          alert(`Question insert error: ${questionError.message}`)
+          return
+        }
+
+        const answerRows = q.answers.map((answer, index) => ({
+          question_id: insertedQuestion.id,
+          answer_text: answer,
+          answer_order: index
+        }))
+
+        const { error: answersError } = await supabase
+          .from('answers')
+          .insert(answerRows)
+
+        if (answersError) {
+          console.error('Answer insert error:', answersError)
+          alert(`Answer insert error: ${answersError.message}`)
+          return
+        }
+      }
     }
 
     alert('Game started')
