@@ -32,20 +32,49 @@ export default function HostPage() {
   }, [])
 
   const startGame = async () => {
-    const { error } = await supabase.from('rooms').insert({
+  const { data: existingRoom, error: lookupError } = await supabase
+    .from('rooms')
+    .select('id')
+    .eq('room_code', roomCode)
+    .maybeSingle()
+
+  if (lookupError) {
+    console.error('Room lookup error:', lookupError)
+    alert(`Room lookup error: ${lookupError.message}`)
+    return
+  }
+
+  if (!existingRoom) {
+    const { error: insertError } = await supabase.from('rooms').insert({
       room_code: roomCode,
       status: 'question',
       current_question: 0
     })
 
-    if (error) {
-      console.error(error)
-      alert('Could not start game')
+    if (insertError) {
+      console.error('Insert error:', insertError)
+      alert(`Could not start game: ${insertError.message}`)
       return
     }
+  } else {
+    const { error: updateError } = await supabase
+      .from('rooms')
+      .update({
+        status: 'question',
+        current_question: 0
+      })
+      .eq('room_code', roomCode)
 
-    alert('Game started')
+    if (updateError) {
+      console.error('Update error:', updateError)
+      alert(`Could not start game: ${updateError.message}`)
+      return
+    }
   }
+
+  alert('Game started')
+}
+``
 
   return (
     <div className="container">
