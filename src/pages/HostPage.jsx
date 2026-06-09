@@ -23,6 +23,8 @@ export default function HostPage() {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [questionCount, setQuestionCount] = useState(0)
   const [currentQuestionText, setCurrentQuestionText] = useState('')
+  const [roomStatus, setRoomStatus] = useState('lobby')
+  const [revealResult, setRevealResult] = useState(null)
 
   const fetchPlayers = async (targetRoomId) => {
     if (!targetRoomId) return
@@ -58,6 +60,7 @@ export default function HostPage() {
     if (!room) return
 
     setCurrentQuestion(room.current_question)
+    setRoomStatus(room.status)
 
     const { data: questions, error: questionsError } = await supabase
       .from('questions')
@@ -82,11 +85,9 @@ export default function HostPage() {
   useEffect(() => {
     if (!roomId) return
 
-    // initial fetch
     fetchPlayers(roomId)
     fetchRoomState(roomId)
 
-    // fallback polling to keep host screen updated
     const interval = setInterval(() => {
       fetchPlayers(roomId)
       fetchRoomState(roomId)
@@ -98,7 +99,6 @@ export default function HostPage() {
   const startGame = async () => {
     let currentRoomId
 
-    // 1. Find or create room
     const { data: existingRoom, error: lookupError } = await supabase
       .from('rooms')
       .select('id')
@@ -147,7 +147,6 @@ export default function HostPage() {
       }
     }
 
-    // 2. Check if room already has questions
     const { count, error: countError } = await supabase
       .from('questions')
       .select('*', { count: 'exact', head: true })
@@ -159,7 +158,6 @@ export default function HostPage() {
       return
     }
 
-    // 3. Insert seed questions if none exist yet
     if (count === 0) {
       for (let i = 0; i < seedQuestions.length; i++) {
         const q = seedQuestions[i]
@@ -198,12 +196,141 @@ export default function HostPage() {
       }
     }
 
-    // 4. Store room id and immediately refresh host state
     setRoomId(currentRoomId)
+    setRevealResult(null)
+
     await fetchPlayers(currentRoomId)
     await fetchRoomState(currentRoomId)
 
     alert('Game started')
+  }
+
+  const reveal = async () => {
+    if (!roomId) {
+      alert('Start the game first')
+      return
+    }
+
+    // Prevent double-scoring
+    const { data: room, error: roomError } = await supabase
+      .from('rooms')
+      .select('current_question, status')
+      .eq('id', roomId)
+      .maybeSingle()
+
+    if (roomError) {
+      console.error('Room fetch error:', roomError)
+      alert(`Could not load room state: ${roomError.message}`)
+      return
+    }
+
+    if (!room) {
+      alert('Room not found')
+      return
+    }
+
+    if (room.status === 'reveal') {
+      alert('This question has already been revealed')
+      return
+    }
+
+    const { data: questionRow, error: questionError } = await supabase
+      .from('questions')
+      .select('id, question_text')
+      .eq('room_id', roomId)
+      .eq('question_order', room.current_question)
+      .maybeSingle()
+
+    if (questionError) {
+      console.error('Question fetch error:', questionError)
+      alert(`Could not load question: ${questionError.message}`)
+      return
+    }
+
+    if (!questionRow) {
+      alert('No question found')
+      return
+    }
+
+    const { data: submissions, error: submissionsError } = await supabase
+      .from('submissions')
+      .select('nickname, answer')
+      .eq('room_id', roomId)
+      .eq('question_id', questionRow.id)
+
+    if (submissionsError) {
+      console.error('Submission fetch error:', submissionsError)
+      alert(`Could not load submissions: ${submissionsError.message}`)
+      return
+    }
+
+    if (!submissions || submissions.length === 0) {
+      alert('No submissions yet for this question')
+      return
+    }
+
+    // Count answers
+    const counts = {}
+    submissions.forEach(sub => {
+      counts[sub.answer] = (counts[sub.answer] || 0) + 1
+    })
+
+    const max = Math.max(...Object.values(counts))
+    const winningAnswers = Object.keys(counts).filter(
+      answer => counts[answer] === max
+    )
+
+    const winningNicknames = submissions
+      .filter(sub => winningAnswers.includes(sub.answer))
+      .map(sub => sub.nickname)
+
+    // Award points
+    const { data: currentPlayers, error: playersError } = await supabase
+      .from('players')
+      .select('*')
+      .eq('room_id', roomId)
+
+    if (playersError) {
+      console.error('Players fetch error:', playersError)
+      alert(`Could not load players: ${playersError.message}`)
+      return
+    }
+
+    for (const player of currentPlayers) {
+      if (winningNicknames.includes(player.nickname)) {
+        const { error: updateError } = await supabase
+          .from('players')
+          .update({ score: player.score + 1 })
+          .eq('id', player.id)
+
+        if (updateError) {
+          console.error('Player score update error:', updateError)
+          alert(`Could not update score: ${updateError.message}`)
+          return
+        }
+      }
+    }
+
+    // Mark room as revealed so reveal cannot score twice
+    const { error: roomUpdateError } = await supabase
+      .from('rooms')
+      .update({ status: 'reveal' })
+      .eq('id', roomId)
+
+    if (roomUpdateError) {
+      console.error('Room status update error:', roomUpdateError)
+      alert(`Could not update room status: ${roomUpdateError.message}`)
+      return
+    }
+
+    setRevealResult({
+      winningAnswers,
+      counts,
+      winningNicknames
+    })
+
+    await fetchPlayers(roomId)
+    await fetchRoomState(roomId)
   }
 
   const nextQuestion = async () => {
@@ -212,7 +339,6 @@ export default function HostPage() {
       return
     }
 
-    // Always read the true latest room state from the database
     const { data: room, error: roomError } = await supabase
       .from('rooms')
       .select('current_question')
@@ -259,7 +385,7 @@ export default function HostPage() {
       return
     }
 
-    // immediately refresh host page state
+    setRevealResult(null)
     await fetchRoomState(roomId)
   }
 
@@ -273,7 +399,7 @@ export default function HostPage() {
           Start Game
         </button>
 
-        <button style={{ marginLeft: 10 }}>
+        <button style={{ marginLeft: 10 }} onClick={reveal}>
           Reveal
         </button>
 
@@ -291,12 +417,36 @@ export default function HostPage() {
       </div>
 
       <div className="card">
-        <h2>Connected Players</h2>
+        <h2>Reveal Results</h2>
+        {!revealResult ? (
+          <p>No reveal yet for this question.</p>
+        ) : (
+          <>
+            <p><strong>Winning answer(s):</strong> {revealResult.winningAnswers.join(' / ')}</p>
+            <p><strong>Counts:</strong></p>
+            {Object.entries(revealResult.counts).map(([answer, count]) => (
+              <div key={answer}>
+                {answer}: {count}
+              </div>
+            ))}
+            <br />
+            <p><strong>Players who moved up:</strong></p>
+            {revealResult.winningNicknames.map(name => (
+              <div key={name}>{name}</div>
+            ))}
+          </>
+        )}
+      </div>
+
+      <div className="card">
+        <h2>Connected Players / Scores</h2>
         {players.length === 0 ? (
           <p>No players joined this room yet.</p>
         ) : (
           players.map(player => (
-            <div key={player.id}>{player.nickname}</div>
+            <div key={player.id}>
+              {player.nickname} — {player.score}
+            </div>
           ))
         )}
       </div>
