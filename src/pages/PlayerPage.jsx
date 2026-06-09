@@ -8,126 +8,112 @@ export default function PlayerPage() {
   const [question, setQuestion] = useState(null)
   const [roomId, setRoomId] = useState(null)
   const [submitted, setSubmitted] = useState(false)
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(null)
+
+  const loadQuestion = async () => {
+    // 1. Load room
+    const { data: room, error: roomError } = await supabase
+      .from('rooms')
+      .select('id, current_question, status')
+      .eq('room_code', roomCode)
+      .maybeSingle()
+
+    if (roomError) {
+      console.error('Room fetch error:', roomError)
+      return
+    }
+
+    if (!room) {
+      console.error('Room not found')
+      return
+    }
+
+    setRoomId(room.id)
+
+    // only reload question if question index changed OR question not loaded yet
+    const shouldReload =
+      currentQuestionIndex === null ||
+      room.current_question !== currentQuestionIndex ||
+      question === null
+
+    if (!shouldReload) {
+      return
+    }
+
+    setCurrentQuestionIndex(room.current_question)
+
+    // 2. Load current question
+    const { data: questionRow, error: questionError } = await supabase
+      .from('questions')
+      .select('id, question_text, question_order')
+      .eq('room_id', room.id)
+      .eq('question_order', room.current_question)
+      .maybeSingle()
+
+    if (questionError) {
+      console.error('Question fetch error:', questionError)
+      return
+    }
+
+    if (!questionRow) {
+      console.error('No question found for this room')
+      setQuestion(null)
+      return
+    }
+
+    // 3. Load answers
+    const { data: answers, error: answersError } = await supabase
+      .from('answers')
+      .select('id, answer_text, answer_order')
+      .eq('question_id', questionRow.id)
+      .order('answer_order', { ascending: true })
+
+    if (answersError) {
+      console.error('Answers fetch error:', answersError)
+      return
+    }
+
+    setQuestion({
+      id: questionRow.id,
+      text: questionRow.question_text,
+      answers: answers.map(a => a.answer_text)
+    })
+
+    // 4. Reset local UI for the new question
+    setSelected(null)
+    setSubmitted(false)
+
+    // 5. Check whether this player already submitted for this question
+    const nickname = localStorage.getItem('nickname')
+
+    if (nickname) {
+      const { data: existingSubmission, error: submissionCheckError } = await supabase
+        .from('submissions')
+        .select('id')
+        .eq('room_id', room.id)
+        .eq('nickname', nickname)
+        .eq('question_id', questionRow.id)
+        .maybeSingle()
+
+      if (submissionCheckError) {
+        console.error('Submission check error:', submissionCheckError)
+        return
+      }
+
+      if (existingSubmission) {
+        setSubmitted(true)
+      }
+    }
+  }
 
   useEffect(() => {
-    let roomChannel
-
-    const loadQuestion = async () => {
-      // 1. Load room
-      const { data: room, error: roomError } = await supabase
-        .from('rooms')
-        .select('id, current_question, status')
-        .eq('room_code', roomCode)
-        .maybeSingle()
-
-      if (roomError) {
-        console.error('Room fetch error:', roomError)
-        return
-      }
-
-      if (!room) {
-        console.error('Room not found')
-        return
-      }
-
-      setRoomId(room.id)
-      setCurrentQuestionIndex(room.current_question)
-
-      // 2. Load current question
-      const { data: questionRow, error: questionError } = await supabase
-        .from('questions')
-        .select('id, question_text, question_order')
-        .eq('room_id', room.id)
-        .eq('question_order', room.current_question)
-        .maybeSingle()
-
-      if (questionError) {
-        console.error('Question fetch error:', questionError)
-        return
-      }
-
-      if (!questionRow) {
-        console.error('No question found for this room')
-        setQuestion(null)
-        return
-      }
-
-      // 3. Load answers
-      const { data: answers, error: answersError } = await supabase
-        .from('answers')
-        .select('id, answer_text, answer_order')
-        .eq('question_id', questionRow.id)
-        .order('answer_order', { ascending: true })
-
-      if (answersError) {
-        console.error('Answers fetch error:', answersError)
-        return
-      }
-
-      setQuestion({
-        id: questionRow.id,
-        text: questionRow.question_text,
-        answers: answers.map(a => a.answer_text)
-      })
-
-      // Reset UI for new question
-      setSelected(null)
-      setSubmitted(false)
-
-      // 4. Check if this player already submitted for this question
-      const nickname = localStorage.getItem('nickname')
-
-      if (nickname) {
-        const { data: existingSubmission, error: submissionCheckError } = await supabase
-          .from('submissions')
-          .select('id')
-          .eq('room_id', room.id)
-          .eq('nickname', nickname)
-          .eq('question_id', questionRow.id)
-          .maybeSingle()
-
-        if (submissionCheckError) {
-          console.error('Submission check error:', submissionCheckError)
-          return
-        }
-
-        if (existingSubmission) {
-          setSubmitted(true)
-        }
-      }
-
-      // 5. Subscribe to room updates once room exists
-      if (!roomChannel) {
-        roomChannel = supabase
-          .channel(`room-updates-${room.id}`)
-          .on(
-            'postgres_changes',
-            {
-              event: 'UPDATE',
-              schema: 'public',
-              table: 'rooms',
-              filter: `id=eq.${room.id}`
-            },
-            payload => {
-              const nextIndex = payload.new.current_question
-
-              if (nextIndex !== currentQuestionIndex) {
-                loadQuestion()
-              }
-            }
-          )
-          .subscribe()
-      }
-    }
-
     loadQuestion()
 
-    return () => {
-      if (roomChannel) {
-        supabase.removeChannel(roomChannel)
-      }
-    }
+    const interval = setInterval(() => {
+      loadQuestion()
+    }, 2000)
+
+    return () => clearInterval(interval)
   }, [roomCode, currentQuestionIndex])
 
   const submitAnswer = async () => {
@@ -197,4 +183,3 @@ export default function PlayerPage() {
     </div>
   )
 }
-``
