@@ -11,6 +11,7 @@ export default function PlayerPage() {
 
   useEffect(() => {
     const loadQuestion = async () => {
+      // 1. Load room
       const { data: room, error: roomError } = await supabase
         .from('rooms')
         .select('id, current_question, status')
@@ -29,6 +30,7 @@ export default function PlayerPage() {
 
       setRoomId(room.id)
 
+      // 2. Load current question for the room
       const { data: questionRow, error: questionError } = await supabase
         .from('questions')
         .select('id, question_text, question_order')
@@ -46,6 +48,7 @@ export default function PlayerPage() {
         return
       }
 
+      // 3. Load answers for that question
       const { data: answers, error: answersError } = await supabase
         .from('answers')
         .select('id, answer_text, answer_order')
@@ -63,9 +66,31 @@ export default function PlayerPage() {
         answers: answers.map(a => a.answer_text)
       })
 
-      // reset local state when a new question loads
+      // reset UI for a freshly loaded question
       setSelected(null)
       setSubmitted(false)
+
+      // 4. Check whether this player has already submitted for this question
+      const nickname = localStorage.getItem('nickname')
+
+      if (nickname) {
+        const { data: existingSubmission, error: submissionCheckError } = await supabase
+          .from('submissions')
+          .select('id')
+          .eq('room_id', room.id)
+          .eq('nickname', nickname)
+          .eq('question_id', questionRow.id)
+          .maybeSingle()
+
+        if (submissionCheckError) {
+          console.error('Submission check error:', submissionCheckError)
+          return
+        }
+
+        if (existingSubmission) {
+          setSubmitted(true)
+        }
+      }
     }
 
     loadQuestion()
