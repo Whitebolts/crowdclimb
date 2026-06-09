@@ -11,6 +11,7 @@ export default function HostPage() {
       setPlayers(data || [])
     }
 
+    
     fetchPlayers()
 
     const channel = supabase
