@@ -1,3 +1,4 @@
+
 body {
   font-family: Arial, sans-serif;
   background: #f4f7fb;
@@ -48,6 +49,7 @@ select {
   border: 1px solid #d7deea;
   font-family: inherit;
   box-sizing: border-box;
+  margin-top: 8px;
 }
 
 textarea {
