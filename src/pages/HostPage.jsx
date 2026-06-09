@@ -86,7 +86,7 @@ export default function HostPage() {
   const fetchSubmissions = async (targetRoomId, questionOrderArg = null) => {
     if (!targetRoomId) return
 
-    let questionOrder = questionOrderArg ?? currentQuestion
+    const questionOrder = questionOrderArg ?? currentQuestion
 
     const { data: questionRow, error: questionError } = await supabase
       .from('questions')
@@ -107,7 +107,7 @@ export default function HostPage() {
 
     const { data, error } = await supabase
       .from('submissions')
-      .select('nickname, answer')
+      .select('player_id, nickname, answer')
       .eq('room_id', targetRoomId)
       .eq('question_id', questionRow.id)
 
@@ -295,7 +295,7 @@ export default function HostPage() {
 
     const { data: currentSubmissions, error: submissionsError } = await supabase
       .from('submissions')
-      .select('nickname, answer')
+      .select('player_id, nickname, answer')
       .eq('room_id', roomId)
       .eq('question_id', questionRow.id)
 
@@ -320,9 +320,9 @@ export default function HostPage() {
       answer => counts[answer] === max
     )
 
-    const winningNicknames = currentSubmissions
+    const winningPlayerIds = currentSubmissions
       .filter(sub => winningAnswers.includes(sub.answer))
-      .map(sub => sub.nickname)
+      .map(sub => sub.player_id)
 
     const { data: currentPlayers, error: playersError } = await supabase
       .from('players')
@@ -336,7 +336,7 @@ export default function HostPage() {
     }
 
     for (const player of currentPlayers) {
-      if (winningNicknames.includes(player.nickname)) {
+      if (winningPlayerIds.includes(player.id)) {
         const { error: updateError } = await supabase
           .from('players')
           .update({ score: player.score + 1 })
@@ -364,7 +364,7 @@ export default function HostPage() {
     setRevealResult({
       winningAnswers,
       counts,
-      winningNicknames
+      winningPlayerIds
     })
 
     setSubmissions(currentSubmissions)
@@ -441,7 +441,9 @@ export default function HostPage() {
 
   const submittedMap = {}
   submissions.forEach(sub => {
-    submittedMap[sub.nickname] = sub.answer
+    if (sub.player_id) {
+      submittedMap[sub.player_id] = sub.answer
+    }
   })
 
   return (
@@ -486,7 +488,7 @@ export default function HostPage() {
             </thead>
             <tbody>
               {players.map(player => {
-                const submittedAnswer = submittedMap[player.nickname]
+                const submittedAnswer = submittedMap[player.id]
                 const hasSubmitted = Boolean(submittedAnswer)
 
                 return (
@@ -518,11 +520,6 @@ export default function HostPage() {
               <div key={answer}>
                 {answer}: {count}
               </div>
-            ))}
-            <br />
-            <p><strong>Players who moved up:</strong></p>
-            {revealResult.winningNicknames.map(name => (
-              <div key={name}>{name}</div>
             ))}
           </>
         )}
