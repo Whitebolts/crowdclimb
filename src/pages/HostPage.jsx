@@ -211,7 +211,6 @@ export default function HostPage() {
       return
     }
 
-    // Prevent double-scoring
     const { data: room, error: roomError } = await supabase
       .from('rooms')
       .select('current_question, status')
@@ -269,7 +268,6 @@ export default function HostPage() {
       return
     }
 
-    // Count answers
     const counts = {}
     submissions.forEach(sub => {
       counts[sub.answer] = (counts[sub.answer] || 0) + 1
@@ -284,7 +282,6 @@ export default function HostPage() {
       .filter(sub => winningAnswers.includes(sub.answer))
       .map(sub => sub.nickname)
 
-    // Award points
     const { data: currentPlayers, error: playersError } = await supabase
       .from('players')
       .select('*')
@@ -311,7 +308,6 @@ export default function HostPage() {
       }
     }
 
-    // Mark room as revealed so reveal cannot score twice
     const { error: roomUpdateError } = await supabase
       .from('rooms')
       .update({ status: 'reveal' })
@@ -389,6 +385,14 @@ export default function HostPage() {
     await fetchRoomState(roomId)
   }
 
+  const sortedPlayers = [...players].sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score
+    return a.nickname.localeCompare(b.nickname)
+  })
+
+  const highestScore =
+    sortedPlayers.length > 0 ? Math.max(...sortedPlayers.map(p => p.score)) : 0
+
   return (
     <div className="container">
       <div className="card">
@@ -435,6 +439,48 @@ export default function HostPage() {
               <div key={name}>{name}</div>
             ))}
           </>
+        )}
+      </div>
+
+      <div className="card">
+        <h2>Live Staircase Leaderboard</h2>
+
+        {sortedPlayers.length === 0 ? (
+          <p>No players joined this room yet.</p>
+        ) : (
+          <div className="stairsHost">
+            {sortedPlayers.map(player => {
+              const isLeader = player.score === highestScore && highestScore > 0
+
+              return (
+                <div
+                  key={player.id}
+                  className={`lane ${isLeader ? 'leader' : ''}`}
+                >
+                  <div className="label">
+                    {player.nickname} ({player.score})
+                  </div>
+
+                  <div className="steps">
+                    {Array.from({ length: Math.max(questionCount, 1) }).map((_, i) => {
+                      const on = i < player.score
+                      const showToken = on && i === player.score - 1
+
+                      return (
+                        <div key={i} className={`step ${on ? 'on' : ''}`}>
+                          {showToken && (
+                            <div className="token">
+                              {player.nickname.slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         )}
       </div>
 
