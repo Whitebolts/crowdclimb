@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -518,13 +517,20 @@ export default function HostPage() {
     return a.nickname.localeCompare(b.nickname)
   })
 
-  const highestScore = sortedPlayers.length > 0 ? Math.max(...sortedPlayers.map(p => p.score)) : 0
-  const winnerNames = sortedPlayers.filter(player => player.score === highestScore).map(player => player.nickname)
+  const highestScore =
+    sortedPlayers.length > 0 ? Math.max(...sortedPlayers.map(p => p.score)) : 0
+
+  const winnerNames = sortedPlayers
+    .filter(player => player.score === highestScore)
+    .map(player => player.nickname)
 
   const submittedMap = {}
   submissions.forEach(sub => {
     if (sub.player_id) submittedMap[sub.player_id] = sub.answer
   })
+
+  const submittedCount = players.filter(player => Boolean(submittedMap[player.id])).length
+  const totalPlayers = players.length
 
   const isGameFinished = roomStatus === 'finished' && questionCount > 0
 
@@ -536,10 +542,19 @@ export default function HostPage() {
 
         <button onClick={startGame}>Start Game</button>
         <button style={{ marginLeft: 10 }} onClick={reveal}>Reveal</button>
-        <button style={{ marginLeft: 10 }} onClick={nextQuestion} disabled={roomStatus !== 'reveal'}>Next Question</button>
+        <button
+          style={{ marginLeft: 10 }}
+          onClick={nextQuestion}
+          disabled={roomStatus !== 'reveal'}
+        >
+          Next Question
+        </button>
         <button style={{ marginLeft: 10 }} onClick={restartGame}>Restart Game</button>
         <button style={{ marginLeft: 10 }} onClick={resetGame}>Reset</button>
-        <button style={{ marginLeft: 10 }} onClick={() => setShowQuestionBuilder(prev => !prev)}>
+        <button
+          style={{ marginLeft: 10 }}
+          onClick={() => setShowQuestionBuilder(prev => !prev)}
+        >
           {showQuestionBuilder ? 'Hide Questions' : 'Show Questions'}
         </button>
       </div>
@@ -547,13 +562,36 @@ export default function HostPage() {
       {showQuestionBuilder && (
         <div className="card">
           <h2>Question Builder</h2>
-          <p>Add your own room questions below. There are no stock fallback questions now, so at least one custom question is required.</p>
+          <p>
+            Add your own room questions below. There are no stock fallback questions now, so at least one custom question is required.
+          </p>
 
-          <textarea value={draftQuestion} onChange={(e) => setDraftQuestion(e.target.value)} placeholder="Enter question prompt" />
-          <input value={draftAnswers[0]} onChange={(e) => setDraftAnswers(prev => [e.target.value, prev[1], prev[2], prev[3]])} placeholder="Answer 1" />
-          <input value={draftAnswers[1]} onChange={(e) => setDraftAnswers(prev => [prev[0], e.target.value, prev[2], prev[3]])} placeholder="Answer 2" />
-          <input value={draftAnswers[2]} onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], e.target.value, prev[3]])} placeholder="Answer 3 (optional)" />
-          <input value={draftAnswers[3]} onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], prev[2], e.target.value])} placeholder="Answer 4 (optional)" />
+          <textarea
+            value={draftQuestion}
+            onChange={(e) => setDraftQuestion(e.target.value)}
+            placeholder="Enter question prompt"
+          />
+
+          <input
+            value={draftAnswers[0]}
+            onChange={(e) => setDraftAnswers(prev => [e.target.value, prev[1], prev[2], prev[3]])}
+            placeholder="Answer 1"
+          />
+          <input
+            value={draftAnswers[1]}
+            onChange={(e) => setDraftAnswers(prev => [prev[0], e.target.value, prev[2], prev[3]])}
+            placeholder="Answer 2"
+          />
+          <input
+            value={draftAnswers[2]}
+            onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], e.target.value, prev[3]])}
+            placeholder="Answer 3 (optional)"
+          />
+          <input
+            value={draftAnswers[3]}
+            onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], prev[2], e.target.value])}
+            placeholder="Answer 4 (optional)"
+          />
 
           <button onClick={addQuestionDraft}>Add Question</button>
 
@@ -563,10 +601,19 @@ export default function HostPage() {
               <p style={{ marginTop: 12 }}>No custom questions added yet.</p>
             ) : (
               customQuestions.map((q, index) => (
-                <div key={index} className="card" style={{ marginTop: 12, marginBottom: 0, padding: 14 }}>
+                <div
+                  key={index}
+                  className="card"
+                  style={{ marginTop: 12, marginBottom: 0, padding: 14 }}
+                >
                   <div><strong>{index + 1}. {q.question_text}</strong></div>
                   <div style={{ marginTop: 8 }}>{q.answers.join(' • ')}</div>
-                  <button style={{ marginTop: 10 }} onClick={() => removeQuestion(index)}>Remove</button>
+                  <button
+                    style={{ marginTop: 10 }}
+                    onClick={() => removeQuestion(index)}
+                  >
+                    Remove
+                  </button>
                 </div>
               ))
             )}
@@ -577,11 +624,12 @@ export default function HostPage() {
       <div className="card">
         <h2>Current Question</h2>
         <p>Question {questionCount === 0 ? 0 : currentQuestion + 1} / {questionCount}</p>
+        <p><strong>Submissions:</strong> {submittedCount} / {totalPlayers}</p>
         <p>{currentQuestionText || 'Start the game to load questions'}</p>
       </div>
 
       <div className="card">
-        <h2>Submission Status</h2>
+        <h2>Submission Status ({submittedCount} / {totalPlayers})</h2>
         {players.length === 0 ? (
           <p>No players joined this room yet.</p>
         ) : (
@@ -597,11 +645,16 @@ export default function HostPage() {
               {players.map(player => {
                 const submittedAnswer = submittedMap[player.id]
                 const hasSubmitted = Boolean(submittedAnswer)
+
                 return (
                   <tr key={player.id}>
                     <td>{player.nickname}</td>
                     <td>{hasSubmitted ? 'Yes' : 'No'}</td>
-                    <td>{roomStatus === 'reveal' || roomStatus === 'finished' ? (submittedAnswer || '—') : (hasSubmitted ? 'Hidden' : 'Waiting')}</td>
+                    <td>
+                      {roomStatus === 'reveal' || roomStatus === 'finished'
+                        ? (submittedAnswer || '—')
+                        : (hasSubmitted ? 'Hidden' : 'Waiting')}
+                    </td>
                   </tr>
                 )
               })}
@@ -629,9 +682,13 @@ export default function HostPage() {
         <div className="card" style={{ background: '#fffaf3', borderColor: '#fcd34d' }}>
           <h2>🏆 Game Winner</h2>
           {winnerNames.length === 1 ? (
-            <p><strong>{winnerNames[0]}</strong> wins with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'}!</p>
+            <p>
+              <strong>{winnerNames[0]}</strong> wins with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'}!
+            </p>
           ) : (
-            <p><strong>Tie:</strong> {winnerNames.join(' / ')} with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'} each.</p>
+            <p>
+              <strong>Tie:</strong> {winnerNames.join(' / ')} with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'} each.
+            </p>
           )}
         </div>
       )}
@@ -653,7 +710,11 @@ export default function HostPage() {
                       const showToken = on && i === player.score - 1
                       return (
                         <div key={i} className={`step ${on ? 'on' : ''}`}>
-                          {showToken && <div className="token">{player.nickname.slice(0, 2).toUpperCase()}</div>}
+                          {showToken && (
+                            <div className="token">
+                              {player.nickname.slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
                         </div>
                       )
                     })}
