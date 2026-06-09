@@ -438,6 +438,11 @@ export default function HostPage() {
       return
     }
 
+    if (roomStatus !== 'reveal') {
+      alert('Reveal the current question before moving to the next one')
+      return
+    }
+
     const { data: room, error: roomError } = await supabase
       .from('rooms')
       .select('current_question')
@@ -513,7 +518,13 @@ export default function HostPage() {
 
         <button onClick={startGame}>Start Game</button>
         <button style={{ marginLeft: 10 }} onClick={reveal}>Reveal</button>
-        <button style={{ marginLeft: 10 }} onClick={nextQuestion}>Next Question</button>
+        <button
+          style={{ marginLeft: 10 }}
+          onClick={nextQuestion}
+          disabled={roomStatus !== 'reveal'}
+        >
+          Next Question
+        </button>
         <button
           style={{ marginLeft: 10 }}
           onClick={() => setShowQuestionBuilder(prev => !prev)}
