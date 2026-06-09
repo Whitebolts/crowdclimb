@@ -50,9 +50,11 @@ export default function HostPage(){
       <div className="card">
         <h1>Host Screen</h1>
         <h2>Room Code: {roomCode}</h2>
-        <button onClick={() => alert('Start Game clicked')}>
+        
+<button onClick={startGame}>
   Start Game
 </button>
+
         <button style={{marginLeft:10}}>Reveal</button>
         <button style={{marginLeft:10}}>Next Question</button>
       </div>
