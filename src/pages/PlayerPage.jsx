@@ -8,8 +8,11 @@ export default function PlayerPage() {
   const [question, setQuestion] = useState(null)
   const [roomId, setRoomId] = useState(null)
   const [submitted, setSubmitted] = useState(false)
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
 
   useEffect(() => {
+    let roomChannel
+
     const loadQuestion = async () => {
       // 1. Load room
       const { data: room, error: roomError } = await supabase
@@ -29,8 +32,9 @@ export default function PlayerPage() {
       }
 
       setRoomId(room.id)
+      setCurrentQuestionIndex(room.current_question)
 
-      // 2. Load current question for the room
+      // 2. Load current question
       const { data: questionRow, error: questionError } = await supabase
         .from('questions')
         .select('id, question_text, question_order')
@@ -45,10 +49,11 @@ export default function PlayerPage() {
 
       if (!questionRow) {
         console.error('No question found for this room')
+        setQuestion(null)
         return
       }
 
-      // 3. Load answers for that question
+      // 3. Load answers
       const { data: answers, error: answersError } = await supabase
         .from('answers')
         .select('id, answer_text, answer_order')
@@ -66,11 +71,11 @@ export default function PlayerPage() {
         answers: answers.map(a => a.answer_text)
       })
 
-      // reset UI for a freshly loaded question
+      // Reset UI for new question
       setSelected(null)
       setSubmitted(false)
 
-      // 4. Check whether this player has already submitted for this question
+      // 4. Check if this player already submitted for this question
       const nickname = localStorage.getItem('nickname')
 
       if (nickname) {
@@ -91,10 +96,39 @@ export default function PlayerPage() {
           setSubmitted(true)
         }
       }
+
+      // 5. Subscribe to room updates once room exists
+      if (!roomChannel) {
+        roomChannel = supabase
+          .channel(`room-updates-${room.id}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'rooms',
+              filter: `id=eq.${room.id}`
+            },
+            payload => {
+              const nextIndex = payload.new.current_question
+
+              if (nextIndex !== currentQuestionIndex) {
+                loadQuestion()
+              }
+            }
+          )
+          .subscribe()
+      }
     }
 
     loadQuestion()
-  }, [roomCode])
+
+    return () => {
+      if (roomChannel) {
+        supabase.removeChannel(roomChannel)
+      }
+    }
+  }, [roomCode, currentQuestionIndex])
 
   const submitAnswer = async () => {
     if (!selected || !question || !roomId || submitted) return
@@ -163,3 +197,4 @@ export default function PlayerPage() {
     </div>
   )
 }
+``
