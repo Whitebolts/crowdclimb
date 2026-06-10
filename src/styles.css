@@ -381,3 +381,130 @@ textarea {
     font-size: 1.3rem;
   }
 }
+
+/* =========================
+   Crowd Climb Player Page
+   ========================= */
+
+.playerScreen {
+  position: relative;
+  min-height: 100vh;
+  background-image: url('/crowdclimb-join-bg.png');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  overflow: hidden;
+}
+
+.playerOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.16) 0%,
+    rgba(15, 23, 42, 0.22) 52%,
+    rgba(15, 23, 42, 0.30) 100%
+  );
+}
+
+.playerShell {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 100vh;
+  padding: 22px;
+  box-sizing: border-box;
+}
+
+.playerCenteredShell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.playerCardHero {
+  width: 100%;
+  max-width: 760px;
+  background: rgba(255, 255, 255, 0.36);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 24px;
+  padding: 26px;
+  box-shadow: 0 14px 38px rgba(15, 23, 42, 0.18);
+}
+
+.playerEndCard {
+  text-align: center;
+}
+
+.playerLogoSmall {
+  width: min(32vw, 230px);
+  min-width: 140px;
+  height: auto;
+  display: block;
+  margin: 0 auto 16px auto;
+  filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.16));
+}
+
+.playerRoomLabel {
+  text-align: center;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 10px;
+}
+
+.playerQuestionTitle {
+  margin-top: 0;
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.playerOptionsGrid {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.playerOption {
+  background: rgba(255, 255, 255, 0.72) !important;
+  border: 1px solid rgba(203, 213, 225, 0.82);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.playerOption:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.10);
+}
+
+.playerOptionSelected {
+  background: #2563eb !important;
+  color: white !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22);
+}
+
+.playerCardHero button {
+  width: 100%;
+  margin-top: 6px;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+}
+
+@media (max-width: 700px) {
+  .playerShell {
+    padding: 18px;
+  }
+
+  .playerCardHero {
+    padding: 22px 18px;
+    border-radius: 22px;
+  }
+
+  .playerLogoSmall {
+    width: min(46vw, 190px);
+    min-width: 120px;
+    margin-bottom: 14px;
+  }
+}
