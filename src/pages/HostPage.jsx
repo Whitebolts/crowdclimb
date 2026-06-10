@@ -20,6 +20,7 @@ export default function HostPage() {
   const [draftAnswers, setDraftAnswers] = useState(['', '', '', ''])
   const [customQuestions, setCustomQuestions] = useState([])
   const [showQuestionBuilder, setShowQuestionBuilder] = useState(true)
+  const [editingIndex, setEditingIndex] = useState(null)
 
   const fetchPlayers = async (targetRoomId) => {
     if (!targetRoomId) return
@@ -124,7 +125,13 @@ export default function HostPage() {
     return () => clearInterval(interval)
   }, [roomId, currentQuestion])
 
-  const addQuestionDraft = () => {
+  const resetDraft = () => {
+    setDraftQuestion('')
+    setDraftAnswers(['', '', '', ''])
+    setEditingIndex(null)
+  }
+
+  const addOrSaveQuestionDraft = () => {
     const prompt = draftQuestion.trim()
     const answers = draftAnswers.map(a => a.trim()).filter(Boolean)
 
@@ -133,13 +140,47 @@ export default function HostPage() {
       return
     }
 
-    setCustomQuestions(prev => [...prev, { question_text: prompt, answers }])
-    setDraftQuestion('')
-    setDraftAnswers(['', '', '', ''])
+    const questionPayload = {
+      question_text: prompt,
+      answers
+    }
+
+    if (editingIndex === null) {
+      setCustomQuestions(prev => [...prev, questionPayload])
+    } else {
+      setCustomQuestions(prev =>
+        prev.map((q, i) => (i === editingIndex ? questionPayload : q))
+      )
+    }
+
+    resetDraft()
+  }
+
+  const beginEditQuestion = (index) => {
+    const q = customQuestions[index]
+    const paddedAnswers = [...q.answers]
+
+    while (paddedAnswers.length < 4) {
+      paddedAnswers.push('')
+    }
+
+    setDraftQuestion(q.question_text)
+    setDraftAnswers(paddedAnswers)
+    setEditingIndex(index)
+    setShowQuestionBuilder(true)
   }
 
   const removeQuestion = (index) => {
     setCustomQuestions(prev => prev.filter((_, i) => i !== index))
+
+    if (editingIndex === index) {
+      resetDraft()
+      return
+    }
+
+    if (editingIndex !== null && editingIndex > index) {
+      setEditingIndex(editingIndex - 1)
+    }
   }
 
   const seedRoomWithCurrentQuestions = async (targetRoomId) => {
@@ -563,7 +604,15 @@ export default function HostPage() {
         <div className="card">
           <h2>Question Builder</h2>
           <p>
-            Add your own room questions below. There are no stock fallback questions now, so at least one custom question is required.
+            Add your own room questions below. At least one custom question is required.
+          </p>
+
+          <p>
+            <strong>
+              {editingIndex === null
+                ? 'Adding a new question'
+                : `Editing question ${editingIndex + 1}`}
+            </strong>
           </p>
 
           <textarea
@@ -593,7 +642,18 @@ export default function HostPage() {
             placeholder="Answer 4 (optional)"
           />
 
-          <button onClick={addQuestionDraft}>Add Question</button>
+          <button onClick={addOrSaveQuestionDraft}>
+            {editingIndex === null ? 'Add Question' : 'Save Changes'}
+          </button>
+
+          {editingIndex !== null && (
+            <button
+              style={{ marginLeft: 10 }}
+              onClick={resetDraft}
+            >
+              Cancel Edit
+            </button>
+          )}
 
           <div style={{ marginTop: 16 }}>
             <strong>Question Set For This Room</strong>
@@ -608,8 +668,16 @@ export default function HostPage() {
                 >
                   <div><strong>{index + 1}. {q.question_text}</strong></div>
                   <div style={{ marginTop: 8 }}>{q.answers.join(' • ')}</div>
+
                   <button
                     style={{ marginTop: 10 }}
+                    onClick={() => beginEditQuestion(index)}
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    style={{ marginTop: 10, marginLeft: 10 }}
                     onClick={() => removeQuestion(index)}
                   >
                     Remove
