@@ -167,6 +167,40 @@ export default function HostPage() {
     resetDraft()
   }
 
+  const exportQuestions = () => {
+  if (customQuestions.length === 0) {
+    alert('There are no custom questions to export.')
+    return
+  }
+
+  const exportPayload = {
+    app: 'Crowd Climb',
+    exported_at: new Date().toISOString(),
+    question_count: customQuestions.length,
+    questions: customQuestions.map((q, index) => ({
+      question_order: index,
+      question_text: q.question_text,
+      answers: q.answers
+    }))
+  }
+
+  const blob = new Blob(
+    [JSON.stringify(exportPayload, null, 2)],
+    { type: 'application/json' }
+  )
+
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  const date = new Date().toISOString().slice(0, 10)
+
+  link.href = url
+  link.download = `crowd-climb-questions-${date}.json`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+  
   const beginEditQuestion = (index) => {
     const q = customQuestions[index]
     const paddedAnswers = [...q.answers]
@@ -698,8 +732,14 @@ export default function HostPage() {
           >
             {showQuestionBuilder ? 'Hide Questions' : 'Show Questions'}
           </button>
+
+          <button style={{ marginLeft: 10 }} onClick={exportQuestions}>
+  Export Questions
+</button>
+          
         </div>
 
+        
         {showQuestionBuilder && (
           <div className="card">
             <h2>Question Builder</h2>
@@ -878,12 +918,30 @@ export default function HostPage() {
         )}
 
         <div className="card">
-          <h2>Mountain Leaderboard</h2>
-          <p style={{ marginTop: 0, color: '#475569' }}>
-            Players begin at the base and climb toward the summit as they score points.
-          </p>
+          <div className="card">
+  <div className="mountainLeaderboardHeader">
+    <div>
+      <h2>Mountain Leaderboard</h2>
+      <p style={{ marginTop: 0, color: '#475569' }}>
+        Players begin at the base and climb toward the summit as they score points.
+      </p>
+    </div>
 
-          {sortedPlayers.length === 0 ? (
+    <div className="mountainLeaderboardControls">
+      <button onClick={reveal}>
+        Reveal
+      </button>
+
+      <button
+        onClick={nextQuestion}
+        disabled={roomStatus !== 'reveal'}
+      >
+        Next Question
+      </button>
+    </div>
+  </div>
+
+  {sortedPlayers.length === 0 ? (
             <p>No players joined this room yet.</p>
           ) : (
             <div
