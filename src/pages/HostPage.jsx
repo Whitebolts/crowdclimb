@@ -183,6 +183,38 @@ export default function HostPage() {
     }
   }
 
+  const moveQuestionUp = (index) => {
+    if (index === 0) return
+
+    setCustomQuestions(prev => {
+      const updated = [...prev]
+      ;[updated[index - 1], updated[index]] = [updated[index], updated[index - 1]]
+      return updated
+    })
+
+    if (editingIndex === index) {
+      setEditingIndex(index - 1)
+    } else if (editingIndex === index - 1) {
+      setEditingIndex(index)
+    }
+  }
+
+  const moveQuestionDown = (index) => {
+    if (index === customQuestions.length - 1) return
+
+    setCustomQuestions(prev => {
+      const updated = [...prev]
+      ;[updated[index], updated[index + 1]] = [updated[index + 1], updated[index]]
+      return updated
+    })
+
+    if (editingIndex === index) {
+      setEditingIndex(index + 1)
+    } else if (editingIndex === index + 1) {
+      setEditingIndex(index)
+    }
+  }
+
   const seedRoomWithCurrentQuestions = async (targetRoomId) => {
     if (customQuestions.length === 0) {
       alert('Add at least one custom question before starting or restarting the game.')
@@ -674,6 +706,22 @@ export default function HostPage() {
                     onClick={() => beginEditQuestion(index)}
                   >
                     Edit
+                  </button>
+
+                  <button
+                    style={{ marginTop: 10, marginLeft: 10 }}
+                    onClick={() => moveQuestionUp(index)}
+                    disabled={index === 0}
+                  >
+                    Move Up
+                  </button>
+
+                  <button
+                    style={{ marginTop: 10, marginLeft: 10 }}
+                    onClick={() => moveQuestionDown(index)}
+                    disabled={index === customQuestions.length - 1}
+                  >
+                    Move Down
                   </button>
 
                   <button
