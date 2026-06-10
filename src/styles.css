@@ -508,3 +508,79 @@ textarea {
     margin-bottom: 14px;
   }
 }
+
+/* =========================
+   Mountain Leaderboard Tokens
+   ========================= */
+
+.mountainTokenWrap {
+  cursor: default;
+}
+
+.mountainToken {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: #2563eb;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 14px;
+  border: 3px solid rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22);
+}
+
+.mountainTokenLeader {
+  background: #d97706;
+  box-shadow: 0 10px 24px rgba(217, 119, 6, 0.32);
+}
+
+.mountainTokenTooltip {
+  position: absolute;
+  left: 50%;
+  bottom: 54px;
+  transform: translateX(-50%) translateY(4px);
+  background: rgba(15, 23, 42, 0.92);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  padding: 6px 9px;
+  border-radius: 999px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.22);
+}
+
+.mountainTokenTooltip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0 6px;
+  border-style: solid;
+  border-color: rgba(15, 23, 42, 0.92) transparent transparent transparent;
+}
+
+.mountainTokenWrap:hover .mountainTokenTooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+@media (max-width: 700px) {
+  .mountainToken {
+    width: 36px;
+    height: 36px;
+    font-size: 12px;
+    border-width: 2px;
+  }
+
+  .mountainTokenTooltip {
+    bottom: 46px;
+    font-size: 12px;
+  }
+}
