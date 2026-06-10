@@ -584,3 +584,112 @@ textarea {
     font-size: 12px;
   }
 }
+
+/* =========================
+   Player Mountain Leaderboard
+   ========================= */
+
+.playerGameShell {
+  flex-direction: column;
+  gap: 18px;
+}
+
+.playerMountainCard {
+  width: 100%;
+  max-width: 760px;
+  background: rgba(255, 255, 255, 0.30);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 24px;
+  padding: 18px;
+  box-shadow: 0 14px 38px rgba(15, 23, 42, 0.14);
+}
+
+.playerMountainCard h3 {
+  margin: 0 0 4px 0;
+  font-size: 1.15rem;
+  color: #1f2937;
+}
+
+.playerMountainCard p {
+  margin: 0 0 10px 0;
+  color: #475569;
+  font-size: 0.95rem;
+}
+
+.playerMountainBoard {
+  position: relative;
+  min-height: 300px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%);
+}
+
+.playerMountainImage {
+  position: absolute;
+  left: 50%;
+  top: 16px;
+  transform: translateX(-50%);
+  width: min(100%, 720px);
+  height: 78%;
+  object-fit: contain;
+  opacity: 0.98;
+  pointer-events: none;
+}
+
+.playerMountainTokenLayer {
+  position: absolute;
+  inset: 0;
+}
+
+.playerMountainTokenWrap {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  transition: left 0.6s ease, top 0.6s ease, transform 0.25s ease;
+}
+
+.playerMountainToken {
+  width: 34px;
+  height: 34px;
+  font-size: 11px;
+  border-width: 2px;
+}
+
+.playerMountainTokenCurrent {
+  outline: 3px solid rgba(255, 255, 255, 0.62);
+  outline-offset: 2px;
+}
+
+@media (max-width: 700px) {
+  .playerGameShell {
+    justify-content: flex-start;
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+
+  .playerMountainCard {
+    padding: 14px;
+    border-radius: 20px;
+  }
+
+  .playerMountainBoard {
+    min-height: 240px;
+  }
+
+  .playerMountainCard h3 {
+    font-size: 1rem;
+  }
+
+  .playerMountainCard p {
+    font-size: 0.85rem;
+  }
+
+  .playerMountainToken {
+    width: 30px;
+    height: 30px;
+    font-size: 10px;
+  }
+}
+
+
