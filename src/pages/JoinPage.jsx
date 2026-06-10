@@ -88,19 +88,15 @@ export default function JoinPage() {
 
       <div className="joinShell">
         <div className="joinBrandBlock">
-          {/* If you have a real logo file, place it in /public/crowd-climb-logo.png */}
-          <img
-            src="/crowd-climb-logo.png"
-            alt="Crowd Climb"
-            className="joinLogo"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
-            }}
-          />
-
-          <h1 className="joinTitle">CROWD CLIMB</h1>
-          <p className="joinTagline">Think like the crowd. Climb to the top.</p>
-        </div>
+  <img
+    src="/crowd-climb-logo.png"
+    alt="Crowd Climb"
+    className="joinLogo"
+    onError={(e) => {
+      e.currentTarget.style.display = 'none'
+    }}
+  />
+</div>
 
         <div className="joinCardHero">
           <h2>Join a Game</h2>
