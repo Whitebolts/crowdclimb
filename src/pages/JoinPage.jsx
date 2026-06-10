@@ -89,7 +89,7 @@ export default function JoinPage() {
       <div className="joinShell">
         <div className="joinBrandBlock">
   <img
-    src="/crowd-climb-logo.png"
+    src="/crowd-climb-logo.svg"
     alt="Crowd Climb"
     className="joinLogo"
     onError={(e) => {
