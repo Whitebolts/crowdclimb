@@ -692,4 +692,44 @@ textarea {
   }
 }
 
+/* Mountain leaderboard host controls */
+
+.mountainLeaderboardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.mountainLeaderboardHeader h2 {
+  margin-top: 0;
+}
+
+.mountainLeaderboardControls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.mountainLeaderboardControls button {
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .mountainLeaderboardHeader {
+    flex-direction: column;
+  }
+
+  .mountainLeaderboardControls {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .mountainLeaderboardControls button {
+    flex: 1;
+  }
+}
 
