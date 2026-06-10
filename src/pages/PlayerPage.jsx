@@ -15,7 +15,7 @@ function getTokenLabel(nickname) {
   if (!clean) return '?'
   return clean.slice(0, 2).toUpperCase()
 }
-
+ 
 export default function PlayerPage() {
   const { roomCode } = useParams()
   const navigate = useNavigate()
