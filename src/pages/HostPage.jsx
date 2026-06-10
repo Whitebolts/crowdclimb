@@ -9,7 +9,7 @@ function generateRoomCode() {
 function naturalNameCompare(a, b) {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
 }
-
+ 
 function getTokenLabel(nickname) {
   const clean = String(nickname || '').trim()
   if (!clean) return '?'
