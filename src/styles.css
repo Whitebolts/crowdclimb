@@ -283,15 +283,20 @@ textarea {
     gap: 18px;
   }
 
-  .joinBrandBlock {
-    text-align: center;
-  }
+ .joinBrandBlock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-  .joinLogo {
-    margin-left: auto;
-    margin-right: auto;
-    max-width: 240px;
-  }
+.joinLogo {
+  max-width: 760px;
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.18));
+}
+
 
   .joinTagline {
     max-width: none;
