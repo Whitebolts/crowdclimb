@@ -608,238 +608,250 @@ export default function HostPage() {
   const isGameFinished = roomStatus === 'finished' && questionCount > 0
 
   return (
-    <div className="container">
-      <div className="card">
-        <h1>Host Screen</h1>
-        <h2>Room Code: {roomCode}</h2>
+    <div className="hostScreen">
+      <div className="hostOverlay" />
 
-        <button onClick={startGame}>Start Game</button>
-        <button style={{ marginLeft: 10 }} onClick={reveal}>Reveal</button>
-        <button
-          style={{ marginLeft: 10 }}
-          onClick={nextQuestion}
-          disabled={roomStatus !== 'reveal'}
-        >
-          Next Question
-        </button>
-        <button style={{ marginLeft: 10 }} onClick={restartGame}>Restart Game</button>
-        <button style={{ marginLeft: 10 }} onClick={resetGame}>Reset</button>
-        <button
-          style={{ marginLeft: 10 }}
-          onClick={() => setShowQuestionBuilder(prev => !prev)}
-        >
-          {showQuestionBuilder ? 'Hide Questions' : 'Show Questions'}
-        </button>
-      </div>
-
-      {showQuestionBuilder && (
-        <div className="card">
-          <h2>Question Builder</h2>
-          <p>
-            Add your own room questions below. At least one custom question is required.
-          </p>
-
-          <p>
-            <strong>
-              {editingIndex === null
-                ? 'Adding a new question'
-                : `Editing question ${editingIndex + 1}`}
-            </strong>
-          </p>
-
-          <textarea
-            value={draftQuestion}
-            onChange={(e) => setDraftQuestion(e.target.value)}
-            placeholder="Enter question prompt"
+      <div className="hostContent container">
+        <div className="card hostHeroCard">
+          <img
+            src="/crowd-climb-logo.svg"
+            alt="Crowd Climb"
+            className="hostLogo"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+            }}
           />
 
-          <input
-            value={draftAnswers[0]}
-            onChange={(e) => setDraftAnswers(prev => [e.target.value, prev[1], prev[2], prev[3]])}
-            placeholder="Answer 1"
-          />
-          <input
-            value={draftAnswers[1]}
-            onChange={(e) => setDraftAnswers(prev => [prev[0], e.target.value, prev[2], prev[3]])}
-            placeholder="Answer 2"
-          />
-          <input
-            value={draftAnswers[2]}
-            onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], e.target.value, prev[3]])}
-            placeholder="Answer 3 (optional)"
-          />
-          <input
-            value={draftAnswers[3]}
-            onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], prev[2], e.target.value])}
-            placeholder="Answer 4 (optional)"
-          />
+          <h2 className="hostRoomCode">Room Code: {roomCode}</h2>
 
-          <button onClick={addOrSaveQuestionDraft}>
-            {editingIndex === null ? 'Add Question' : 'Save Changes'}
+          <button onClick={startGame}>Start Game</button>
+          <button style={{ marginLeft: 10 }} onClick={reveal}>Reveal</button>
+          <button
+            style={{ marginLeft: 10 }}
+            onClick={nextQuestion}
+            disabled={roomStatus !== 'reveal'}
+          >
+            Next Question
           </button>
+          <button style={{ marginLeft: 10 }} onClick={restartGame}>Restart Game</button>
+          <button style={{ marginLeft: 10 }} onClick={resetGame}>Reset</button>
+          <button
+            style={{ marginLeft: 10 }}
+            onClick={() => setShowQuestionBuilder(prev => !prev)}
+          >
+            {showQuestionBuilder ? 'Hide Questions' : 'Show Questions'}
+          </button>
+        </div>
 
-          {editingIndex !== null && (
-            <button
-              style={{ marginLeft: 10 }}
-              onClick={resetDraft}
-            >
-              Cancel Edit
+        {showQuestionBuilder && (
+          <div className="card">
+            <h2>Question Builder</h2>
+            <p>
+              Add your own room questions below. At least one custom question is required.
+            </p>
+
+            <p>
+              <strong>
+                {editingIndex === null
+                  ? 'Adding a new question'
+                  : `Editing question ${editingIndex + 1}`}
+              </strong>
+            </p>
+
+            <textarea
+              value={draftQuestion}
+              onChange={(e) => setDraftQuestion(e.target.value)}
+              placeholder="Enter question prompt"
+            />
+
+            <input
+              value={draftAnswers[0]}
+              onChange={(e) => setDraftAnswers(prev => [e.target.value, prev[1], prev[2], prev[3]])}
+              placeholder="Answer 1"
+            />
+            <input
+              value={draftAnswers[1]}
+              onChange={(e) => setDraftAnswers(prev => [prev[0], e.target.value, prev[2], prev[3]])}
+              placeholder="Answer 2"
+            />
+            <input
+              value={draftAnswers[2]}
+              onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], e.target.value, prev[3]])}
+              placeholder="Answer 3 (optional)"
+            />
+            <input
+              value={draftAnswers[3]}
+              onChange={(e) => setDraftAnswers(prev => [prev[0], prev[1], prev[2], e.target.value])}
+              placeholder="Answer 4 (optional)"
+            />
+
+            <button onClick={addOrSaveQuestionDraft}>
+              {editingIndex === null ? 'Add Question' : 'Save Changes'}
             </button>
+
+            {editingIndex !== null && (
+              <button
+                style={{ marginLeft: 10 }}
+                onClick={resetDraft}
+              >
+                Cancel Edit
+              </button>
+            )}
+
+            <div style={{ marginTop: 16 }}>
+              <strong>Question Set For This Room</strong>
+              {customQuestions.length === 0 ? (
+                <p style={{ marginTop: 12 }}>No custom questions added yet.</p>
+              ) : (
+                customQuestions.map((q, index) => (
+                  <div
+                    key={index}
+                    className="card"
+                    style={{ marginTop: 12, marginBottom: 0, padding: 14 }}
+                  >
+                    <div><strong>{index + 1}. {q.question_text}</strong></div>
+                    <div style={{ marginTop: 8 }}>{q.answers.join(' • ')}</div>
+
+                    <button
+                      style={{ marginTop: 10 }}
+                      onClick={() => beginEditQuestion(index)}
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      style={{ marginTop: 10, marginLeft: 10 }}
+                      onClick={() => moveQuestionUp(index)}
+                      disabled={index === 0}
+                    >
+                      Move Up
+                    </button>
+
+                    <button
+                      style={{ marginTop: 10, marginLeft: 10 }}
+                      onClick={() => moveQuestionDown(index)}
+                      disabled={index === customQuestions.length - 1}
+                    >
+                      Move Down
+                    </button>
+
+                    <button
+                      style={{ marginTop: 10, marginLeft: 10 }}
+                      onClick={() => removeQuestion(index)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="card">
+          <h2>Current Question</h2>
+          <p>Question {questionCount === 0 ? 0 : currentQuestion + 1} / {questionCount}</p>
+          <p><strong>Submissions:</strong> {submittedCount} / {totalPlayers}</p>
+          <p>{currentQuestionText || 'Start the game to load questions'}</p>
+        </div>
+
+        <div className="card">
+          <h2>Submission Status ({submittedCount} / {totalPlayers})</h2>
+          {players.length === 0 ? (
+            <p>No players joined this room yet.</p>
+          ) : (
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Player</th>
+                  <th>Submitted</th>
+                  <th>Answer</th>
+                </tr>
+              </thead>
+              <tbody>
+                {players.map(player => {
+                  const submittedAnswer = submittedMap[player.id]
+                  const hasSubmitted = Boolean(submittedAnswer)
+
+                  return (
+                    <tr key={player.id}>
+                      <td>{player.nickname}</td>
+                      <td>{hasSubmitted ? 'Yes' : 'No'}</td>
+                      <td>
+                        {roomStatus === 'reveal' || roomStatus === 'finished'
+                          ? (submittedAnswer || '—')
+                          : (hasSubmitted ? 'Hidden' : 'Waiting')}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           )}
+        </div>
 
-          <div style={{ marginTop: 16 }}>
-            <strong>Question Set For This Room</strong>
-            {customQuestions.length === 0 ? (
-              <p style={{ marginTop: 12 }}>No custom questions added yet.</p>
+        <div className="card">
+          <h2>Reveal Results</h2>
+          {!revealResult ? (
+            <p>No reveal yet for this question.</p>
+          ) : (
+            <>
+              <p><strong>Winning answer(s):</strong> {revealResult.winningAnswers.join(' / ')}</p>
+              <p><strong>Counts:</strong></p>
+              {Object.entries(revealResult.counts).map(([answer, count]) => (
+                <div key={answer}>{answer}: {count}</div>
+              ))}
+            </>
+          )}
+        </div>
+
+        {isGameFinished && (
+          <div className="card" style={{ background: 'rgba(255, 250, 243, 0.86)', borderColor: '#fcd34d' }}>
+            <h2>🏆 Game Winner</h2>
+            {winnerNames.length === 1 ? (
+              <p>
+                <strong>{winnerNames[0]}</strong> wins with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'}!
+              </p>
             ) : (
-              customQuestions.map((q, index) => (
-                <div
-                  key={index}
-                  className="card"
-                  style={{ marginTop: 12, marginBottom: 0, padding: 14 }}
-                >
-                  <div><strong>{index + 1}. {q.question_text}</strong></div>
-                  <div style={{ marginTop: 8 }}>{q.answers.join(' • ')}</div>
-
-                  <button
-                    style={{ marginTop: 10 }}
-                    onClick={() => beginEditQuestion(index)}
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    style={{ marginTop: 10, marginLeft: 10 }}
-                    onClick={() => moveQuestionUp(index)}
-                    disabled={index === 0}
-                  >
-                    Move Up
-                  </button>
-
-                  <button
-                    style={{ marginTop: 10, marginLeft: 10 }}
-                    onClick={() => moveQuestionDown(index)}
-                    disabled={index === customQuestions.length - 1}
-                  >
-                    Move Down
-                  </button>
-
-                  <button
-                    style={{ marginTop: 10, marginLeft: 10 }}
-                    onClick={() => removeQuestion(index)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))
+              <p>
+                <strong>Tie:</strong> {winnerNames.join(' / ')} with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'} each.
+              </p>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="card">
-        <h2>Current Question</h2>
-        <p>Question {questionCount === 0 ? 0 : currentQuestion + 1} / {questionCount}</p>
-        <p><strong>Submissions:</strong> {submittedCount} / {totalPlayers}</p>
-        <p>{currentQuestionText || 'Start the game to load questions'}</p>
-      </div>
-
-      <div className="card">
-        <h2>Submission Status ({submittedCount} / {totalPlayers})</h2>
-        {players.length === 0 ? (
-          <p>No players joined this room yet.</p>
-        ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Player</th>
-                <th>Submitted</th>
-                <th>Answer</th>
-              </tr>
-            </thead>
-            <tbody>
-              {players.map(player => {
-                const submittedAnswer = submittedMap[player.id]
-                const hasSubmitted = Boolean(submittedAnswer)
-
+        <div className="card">
+          <h2>Live Staircase Leaderboard</h2>
+          {sortedPlayers.length === 0 ? (
+            <p>No players joined this room yet.</p>
+          ) : (
+            <div className="stairsHost">
+              {sortedPlayers.map(player => {
+                const isLeader = player.score === highestScore && highestScore > 0
                 return (
-                  <tr key={player.id}>
-                    <td>{player.nickname}</td>
-                    <td>{hasSubmitted ? 'Yes' : 'No'}</td>
-                    <td>
-                      {roomStatus === 'reveal' || roomStatus === 'finished'
-                        ? (submittedAnswer || '—')
-                        : (hasSubmitted ? 'Hidden' : 'Waiting')}
-                    </td>
-                  </tr>
+                  <div key={player.id} className={`lane ${isLeader ? 'leader' : ''}`}>
+                    <div className="label">{player.nickname} ({player.score})</div>
+                    <div className="steps">
+                      {Array.from({ length: Math.max(questionCount, 1) }).map((_, i) => {
+                        const on = i < player.score
+                        const showToken = on && i === player.score - 1
+                        return (
+                          <div key={i} className={`step ${on ? 'on' : ''}`}>
+                            {showToken && (
+                              <div className="token">
+                                {player.nickname.slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )
               })}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      <div className="card">
-        <h2>Reveal Results</h2>
-        {!revealResult ? (
-          <p>No reveal yet for this question.</p>
-        ) : (
-          <>
-            <p><strong>Winning answer(s):</strong> {revealResult.winningAnswers.join(' / ')}</p>
-            <p><strong>Counts:</strong></p>
-            {Object.entries(revealResult.counts).map(([answer, count]) => (
-              <div key={answer}>{answer}: {count}</div>
-            ))}
-          </>
-        )}
-      </div>
-
-      {isGameFinished && (
-        <div className="card" style={{ background: '#fffaf3', borderColor: '#fcd34d' }}>
-          <h2>🏆 Game Winner</h2>
-          {winnerNames.length === 1 ? (
-            <p>
-              <strong>{winnerNames[0]}</strong> wins with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'}!
-            </p>
-          ) : (
-            <p>
-              <strong>Tie:</strong> {winnerNames.join(' / ')} with <strong>{highestScore}</strong> point{highestScore === 1 ? '' : 's'} each.
-            </p>
+            </div>
           )}
         </div>
-      )}
-
-      <div className="card">
-        <h2>Live Staircase Leaderboard</h2>
-        {sortedPlayers.length === 0 ? (
-          <p>No players joined this room yet.</p>
-        ) : (
-          <div className="stairsHost">
-            {sortedPlayers.map(player => {
-              const isLeader = player.score === highestScore && highestScore > 0
-              return (
-                <div key={player.id} className={`lane ${isLeader ? 'leader' : ''}`}>
-                  <div className="label">{player.nickname} ({player.score})</div>
-                  <div className="steps">
-                    {Array.from({ length: Math.max(questionCount, 1) }).map((_, i) => {
-                      const on = i < player.score
-                      const showToken = on && i === player.score - 1
-                      return (
-                        <div key={i} className={`step ${on ? 'on' : ''}`}>
-                          {showToken && (
-                            <div className="token">
-                              {player.nickname.slice(0, 2).toUpperCase()}
-                            </div>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
       </div>
     </div>
   )
