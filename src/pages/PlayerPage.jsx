@@ -1,7 +1,20 @@
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+
+function naturalNameCompare(a, b) {
+  return String(a || '').localeCompare(String(b || ''), undefined, {
+    numeric: true,
+    sensitivity: 'base'
+  })
+}
+
+function getTokenLabel(nickname) {
+  const clean = String(nickname || '').trim()
+  if (!clean) return '?'
+  return clean.slice(0, 2).toUpperCase()
+}
 
 export default function PlayerPage() {
   const { roomCode } = useParams()
@@ -13,6 +26,37 @@ export default function PlayerPage() {
   const [submitted, setSubmitted] = useState(false)
   const [currentQuestionId, setCurrentQuestionId] = useState(null)
   const [roomStatus, setRoomStatus] = useState('lobby')
+  const [players, setPlayers] = useState([])
+  const [questionCount, setQuestionCount] = useState(0)
+
+  const fetchPlayerLeaderboard = async (targetRoomId) => {
+    if (!targetRoomId) return
+
+    const { data: roomPlayers, error: playersError } = await supabase
+      .from('players')
+      .select('*')
+      .eq('room_id', targetRoomId)
+      .order('created_at', { ascending: true })
+
+    if (playersError) {
+      console.error('Player leaderboard fetch error:', playersError)
+      return
+    }
+
+    setPlayers(roomPlayers || [])
+
+    const { data: questions, error: questionsError } = await supabase
+      .from('questions')
+      .select('id')
+      .eq('room_id', targetRoomId)
+
+    if (questionsError) {
+      console.error('Question count fetch error:', questionsError)
+      return
+    }
+
+    setQuestionCount((questions || []).length)
+  }
 
   const loadQuestion = async () => {
     const { data: room, error: roomError } = await supabase
@@ -33,6 +77,7 @@ export default function PlayerPage() {
 
     setRoomId(room.id)
     setRoomStatus(room.status)
+    await fetchPlayerLeaderboard(room.id)
 
     if (room.status === 'finished') {
       setQuestion(null)
@@ -151,11 +196,113 @@ export default function PlayerPage() {
     navigate('/')
   }
 
+  const sortedPlayers = useMemo(() => {
+    return [...players].sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score
+      return naturalNameCompare(a.nickname, b.nickname)
+    })
+  }, [players])
+
+  const highestScore =
+    sortedPlayers.length > 0 ? Math.max(...sortedPlayers.map(p => p.score)) : 0
+
+  const mountainPositions = useMemo(() => {
+    const maxScore = Math.max(questionCount, 1)
+    const grouped = new Map()
+
+    sortedPlayers.forEach(player => {
+      const bucket = grouped.get(player.score) || []
+      bucket.push(player)
+      grouped.set(player.score, bucket)
+    })
+
+    const byId = {}
+
+    grouped.forEach((bandPlayers, bandScore) => {
+      const progress = Math.min(Math.max(bandScore / maxScore, 0), 1)
+      const y = 76 - progress * 58
+      let bandWidth = 84 - progress * 68
+
+      if (bandPlayers.length === 1) {
+        byId[bandPlayers[0].id] = { x: 50, y }
+        return
+      }
+
+      if (progress >= 0.95) {
+        bandWidth = Math.min(bandWidth, 16)
+      }
+
+      const startX = 50 - bandWidth / 2
+      const step = bandPlayers.length > 1 ? bandWidth / (bandPlayers.length - 1) : 0
+
+      bandPlayers.forEach((player, idx) => {
+        byId[player.id] = {
+          x: startX + step * idx,
+          y
+        }
+      })
+    })
+
+    return byId
+  }, [sortedPlayers, questionCount])
+
+  const MountainLeaderboard = () => {
+    if (sortedPlayers.length === 0) return null
+
+    return (
+      <div className="playerMountainCard">
+        <h3>Mountain Leaderboard</h3>
+        <p>Watch everyone climb toward the summit.</p>
+
+        <div className="playerMountainBoard">
+          <img
+            src="/crowdclimb-mountain-board.png"
+            alt="Mountain leaderboard"
+            className="playerMountainImage"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+            }}
+          />
+
+          <div className="playerMountainTokenLayer">
+            {sortedPlayers.map(player => {
+              const pos = mountainPositions[player.id] || { x: 50, y: 76 }
+              const isLeader = player.score === highestScore && highestScore > 0
+              const isCurrentPlayer = player.id === localStorage.getItem('playerId')
+
+              return (
+                <div
+                  key={player.id}
+                  className="mountainTokenWrap playerMountainTokenWrap"
+                  style={{
+                    left: `${pos.x}%`,
+                    top: `${pos.y}%`,
+                    zIndex: isLeader ? 4 : isCurrentPlayer ? 3 : 2
+                  }}
+                >
+                  <div
+                    className={`mountainToken playerMountainToken ${isLeader ? 'mountainTokenLeader' : ''} ${isCurrentPlayer ? 'playerMountainTokenCurrent' : ''}`}
+                  >
+                    {getTokenLabel(player.nickname)}
+                  </div>
+
+                  <div className="mountainTokenTooltip">
+                    {player.nickname} ({player.score})
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (roomStatus === 'finished') {
     return (
       <div className="playerScreen">
         <div className="playerOverlay" />
-        <div className="playerShell playerCenteredShell">
+        <div className="playerShell playerCenteredShell playerGameShell">
           <div className="playerCardHero playerEndCard">
             <img
               src="/crowd-climb-logo.svg"
@@ -170,6 +317,8 @@ export default function PlayerPage() {
             <p>Watch for the next room code from your host.</p>
             <button onClick={returnToJoinPage}>Return to Join Page</button>
           </div>
+
+          <MountainLeaderboard />
         </div>
       </div>
     )
@@ -179,7 +328,7 @@ export default function PlayerPage() {
     return (
       <div className="playerScreen">
         <div className="playerOverlay" />
-        <div className="playerShell playerCenteredShell">
+        <div className="playerShell playerCenteredShell playerGameShell">
           <div className="playerCardHero">
             <img
               src="/crowd-climb-logo.svg"
@@ -192,6 +341,8 @@ export default function PlayerPage() {
             <h2>Room {roomCode}</h2>
             <p>Loading question...</p>
           </div>
+
+          <MountainLeaderboard />
         </div>
       </div>
     )
@@ -200,7 +351,7 @@ export default function PlayerPage() {
   return (
     <div className="playerScreen">
       <div className="playerOverlay" />
-      <div className="playerShell playerCenteredShell">
+      <div className="playerShell playerCenteredShell playerGameShell">
         <div className="playerCardHero">
           <img
             src="/crowd-climb-logo.svg"
@@ -236,6 +387,8 @@ export default function PlayerPage() {
             </>
           )}
         </div>
+
+        <MountainLeaderboard />
       </div>
     </div>
   )
