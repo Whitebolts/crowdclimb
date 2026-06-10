@@ -618,45 +618,51 @@ export default function HostPage() {
 
   const isGameFinished = roomStatus === 'finished' && questionCount > 0
 
-  const mountainPositions = useMemo(() => {
-    const maxScore = Math.max(questionCount, 1)
-    const grouped = new Map()
+ const mountainPositions = useMemo(() => {
+  const maxScore = Math.max(questionCount, 1)
+  const grouped = new Map()
 
-    sortedPlayers.forEach(player => {
-      const bucket = grouped.get(player.score) || []
-      bucket.push(player)
-      grouped.set(player.score, bucket)
-    })
+  sortedPlayers.forEach(player => {
+    const bucket = grouped.get(player.score) || []
+    bucket.push(player)
+    grouped.set(player.score, bucket)
+  })
 
-    const byId = {}
+  const byId = {}
 
-    grouped.forEach((bandPlayers, bandScore) => {
-      const progress = Math.min(Math.max(bandScore / maxScore, 0), 1)
-      const y = 84 - progress * 66
-      let bandWidth = 88 - progress * 72
+  grouped.forEach((bandPlayers, bandScore) => {
+    const progress = Math.min(Math.max(bandScore / maxScore, 0), 1)
 
-      if (bandPlayers.length === 1) {
-        byId[bandPlayers[0].id] = { x: 50, y }
-        return
+    // Score 0 sits on the lower mountain/base area.
+    // Full score reaches near the central summit.
+    const y = 76 - progress * 58
+
+    // Players spread widely at the base and converge near the summit.
+    let bandWidth = 84 - progress * 68
+
+    if (bandPlayers.length === 1) {
+      byId[bandPlayers[0].id] = { x: 50, y }
+      return
+    }
+
+    if (progress >= 0.95) {
+      bandWidth = Math.min(bandWidth, 16)
+    }
+
+    const startX = 50 - bandWidth / 2
+    const step = bandPlayers.length > 1 ? bandWidth / (bandPlayers.length - 1) : 0
+
+    bandPlayers.forEach((player, idx) => {
+      byId[player.id] = {
+        x: startX + step * idx,
+        y
       }
-
-      if (progress === 1) {
-        bandWidth = Math.min(bandWidth, 14)
-      }
-
-      const startX = 50 - bandWidth / 2
-      const step = bandPlayers.length > 1 ? bandWidth / (bandPlayers.length - 1) : 0
-
-      bandPlayers.forEach((player, idx) => {
-        byId[player.id] = {
-          x: startX + step * idx,
-          y
-        }
-      })
     })
+  })
 
-    return byId
-  }, [sortedPlayers, questionCount])
+  return byId
+}, [sortedPlayers, questionCount])
+
 
   return (
     <div className="hostScreen">
@@ -882,31 +888,32 @@ export default function HostPage() {
           ) : (
             <div
               style={{
-                position: 'relative',
-                minHeight: 520,
-                marginTop: 12,
-                borderRadius: 20,
-                overflow: 'hidden',
-                background: 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%)'
-              }}
+  position: 'relative',
+  minHeight: 560,
+  marginTop: 12,
+  borderRadius: 20,
+  overflow: 'hidden',
+  background: 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%)'
+}}
             >
-              <img
-                src="/crowdclimb-mountain-board.png"
-                alt="Mountain leaderboard"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none'
-                }}
-                style={{
-                  position: 'absolute',
-                  left: '50%',
-                  bottom: 8,
-                  transform: 'translateX(-50%)',
-                  width: 'min(100%, 1100px)',
-                  height: 'auto',
-                  opacity: 0.98,
-                  pointerEvents: 'none'
-                }}
-              />
+             <img
+  src="/crowdclimb-mountain-board.png"
+  alt="Mountain leaderboard"
+  onError={(e) => {
+    e.currentTarget.style.display = 'none'
+  }}
+  style={{
+    position: 'absolute',
+    left: '50%',
+    top: 20,
+    transform: 'translateX(-50%)',
+    width: 'min(100%, 1100px)',
+    height: '78%',
+    objectFit: 'contain',
+    opacity: 0.98,
+    pointerEvents: 'none'
+  }}
+/>
 
               <div style={{ position: 'absolute', inset: 0 }}>
                 {sortedPlayers.map(player => {
@@ -915,38 +922,27 @@ export default function HostPage() {
 
                   return (
                     <div
-                      key={player.id}
-                      title={`${player.nickname} (${player.score})`}
-                      style={{
-                        position: 'absolute',
-                        left: `${pos.x}%`,
-                        top: `${pos.y}%`,
-                        transform: 'translate(-50%, -50%)',
-                        transition: 'left 0.6s ease, top 0.6s ease, transform 0.25s ease',
-                        zIndex: isLeader ? 3 : 2
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 44,
-                          height: 44,
-                          borderRadius: '999px',
-                          background: isLeader ? '#d97706' : '#2563eb',
-                          color: 'white',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 800,
-                          fontSize: 14,
-                          border: '3px solid rgba(255,255,255,0.96)',
-                          boxShadow: isLeader
-                            ? '0 10px 24px rgba(217, 119, 6, 0.32)'
-                            : '0 8px 20px rgba(37, 99, 235, 0.22)'
-                        }}
-                      >
-                        {getTokenLabel(player.nickname)}
-                      </div>
-                    </div>
+  key={player.id}
+  className="mountainTokenWrap"
+  style={{
+    position: 'absolute',
+    left: `${pos.x}%`,
+    top: `${pos.y}%`,
+    transform: 'translate(-50%, -50%)',
+    transition: 'left 0.6s ease, top 0.6s ease, transform 0.25s ease',
+    zIndex: isLeader ? 3 : 2
+  }}
+>
+  <div
+    className={`mountainToken ${isLeader ? 'mountainTokenLeader' : ''}`}
+  >
+    {getTokenLabel(player.nickname)}
+  </div>
+
+  <div className="mountainTokenTooltip">
+    {player.nickname} ({player.score})
+  </div>
+</div>
                   )
                 })}
               </div>
