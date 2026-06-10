@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -16,7 +17,6 @@ export default function JoinPage() {
 
     setLoading(true)
 
-    // 1. Find room
     const { data: room, error: roomError } = await supabase
       .from('rooms')
       .select('id, room_code, status')
@@ -36,7 +36,6 @@ export default function JoinPage() {
       return
     }
 
-    // 2. Reuse existing player in this room if nickname already exists
     const { data: existingPlayer, error: existingPlayerError } = await supabase
       .from('players')
       .select('*')
@@ -53,7 +52,6 @@ export default function JoinPage() {
 
     let playerRecord = existingPlayer
 
-    // 3. Insert only if player does not already exist
     if (!playerRecord) {
       const { data: player, error: playerError } = await supabase
         .from('players')
@@ -75,7 +73,6 @@ export default function JoinPage() {
       playerRecord = player
     }
 
-    // 4. Save local state
     localStorage.setItem('nickname', nickname)
     localStorage.setItem('playerId', playerRecord.id)
     localStorage.setItem('roomId', room.id)
@@ -86,30 +83,45 @@ export default function JoinPage() {
   }
 
   return (
-    <div className="container">
-      <div className="card">
-        <h1>Crowd Climb</h1>
-        <p>Join a live room.</p>
+    <div className="joinScreen">
+      <div className="joinOverlay" />
 
-        <input
-          placeholder="Room Code"
-          value={roomCode}
-          onChange={e => setRoomCode(e.target.value)}
-        />
+      <div className="joinShell">
+        <div className="joinBrandBlock">
+          {/* If you have a real logo file, place it in /public/crowd-climb-logo.png */}
+          <img
+            src="/crowd-climb-logo.png"
+            alt="Crowd Climb"
+            className="joinLogo"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+            }}
+          />
 
-        <br /><br />
+          <h1 className="joinTitle">CROWD CLIMB</h1>
+          <p className="joinTagline">Think like the crowd. Climb to the top.</p>
+        </div>
 
-        <input
-          placeholder="Nickname"
-          value={nickname}
-          onChange={e => setNickname(e.target.value)}
-        />
+        <div className="joinCardHero">
+          <h2>Join a Game</h2>
+          <p>Enter the room code from your host and choose a nickname.</p>
 
-        <br /><br />
+          <input
+            placeholder="Room Code"
+            value={roomCode}
+            onChange={e => setRoomCode(e.target.value)}
+          />
 
-        <button onClick={join} disabled={loading}>
-          {loading ? 'Joining...' : 'Join Game'}
-        </button>
+          <input
+            placeholder="Nickname"
+            value={nickname}
+            onChange={e => setNickname(e.target.value)}
+          />
+
+          <button onClick={join} disabled={loading}>
+            {loading ? 'Joining...' : 'Join Crowd Climb'}
+          </button>
+        </div>
       </div>
     </div>
   )
