@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
@@ -33,7 +34,6 @@ export default function PlayerPage() {
     setRoomId(room.id)
     setRoomStatus(room.status)
 
-    // If the host has finished the game, stop loading more questions
     if (room.status === 'finished') {
       setQuestion(null)
       setSubmitted(false)
@@ -58,7 +58,6 @@ export default function PlayerPage() {
       return
     }
 
-    // If this is the same active question, don't rebuild the state unnecessarily
     if (questionRow.id === currentQuestionId) {
       return
     }
@@ -152,65 +151,91 @@ export default function PlayerPage() {
     navigate('/')
   }
 
-  // End-of-game screen
   if (roomStatus === 'finished') {
-  return (
-    <div className="container">
-      <div className="card">
-        <h1>Crowd Climb</h1>
-        <h2>Game finished</h2>
-        <p>Thanks for playing Crowd Climb.</p>
-        <p>Watch for the next room code from your host.</p>
-        <button onClick={returnToJoinPage}>
-          Return to Join Page
-        </button>
+    return (
+      <div className="playerScreen">
+        <div className="playerOverlay" />
+        <div className="playerShell playerCenteredShell">
+          <div className="playerCardHero playerEndCard">
+            <img
+              src="/crowd-climb-logo.svg"
+              alt="Crowd Climb"
+              className="playerLogoSmall"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+            <h2>Game finished</h2>
+            <p>Thanks for playing Crowd Climb.</p>
+            <p>Watch for the next room code from your host.</p>
+            <button onClick={returnToJoinPage}>Return to Join Page</button>
+          </div>
+        </div>
       </div>
-    </div>
-  )
-}
+    )
+  }
 
   if (!question) {
     return (
-      <div className="container">
-        <div className="card">
-          <h1>Room {roomCode}</h1>
-          <p>Loading question...</p>
+      <div className="playerScreen">
+        <div className="playerOverlay" />
+        <div className="playerShell playerCenteredShell">
+          <div className="playerCardHero">
+            <img
+              src="/crowd-climb-logo.svg"
+              alt="Crowd Climb"
+              className="playerLogoSmall"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+              }}
+            />
+            <h2>Room {roomCode}</h2>
+            <p>Loading question...</p>
+          </div>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="container">
-      <div className="card">
-        <h1>Room {roomCode}</h1>
-        <h2>{question.text}</h2>
+    <div className="playerScreen">
+      <div className="playerOverlay" />
+      <div className="playerShell playerCenteredShell">
+        <div className="playerCardHero">
+          <img
+            src="/crowd-climb-logo.svg"
+            alt="Crowd Climb"
+            className="playerLogoSmall"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+            }}
+          />
 
-        {submitted ? (
-          <p><strong>Answer submitted. Waiting for the next question...</strong></p>
-        ) : (
-          <>
-            {question.answers.map(answer => (
-              <div
-                key={answer}
-                className="option"
-                onClick={() => setSelected(answer)}
-                style={{
-                  background: selected === answer ? '#2563eb' : '#eef4ff',
-                  color: selected === answer ? 'white' : '#1f2937',
-                  cursor: 'pointer'
-                }}
-              >
-                {answer}
+          <div className="playerRoomLabel">Room {roomCode}</div>
+          <h2 className="playerQuestionTitle">{question.text}</h2>
+
+          {submitted ? (
+            <p><strong>Answer submitted. Waiting for the next question...</strong></p>
+          ) : (
+            <>
+              <div className="playerOptionsGrid">
+                {question.answers.map(answer => (
+                  <div
+                    key={answer}
+                    className={`option playerOption ${selected === answer ? 'playerOptionSelected' : ''}`}
+                    onClick={() => setSelected(answer)}
+                  >
+                    {answer}
+                  </div>
+                ))}
               </div>
-            ))}
 
-            <br />
-            <button onClick={submitAnswer} disabled={!selected}>
-              Submit Selected Answer
-            </button>
-          </>
-        )}
+              <button onClick={submitAnswer} disabled={!selected}>
+                Submit Selected Answer
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   )
