@@ -182,7 +182,7 @@ textarea {
 .joinScreen {
   position: relative;
   min-height: 100vh;
-  background-image: url('/player-background.png');
+  background-image: url('/player-background-bg.png');
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
