@@ -294,4 +294,90 @@ textarea {
   }
 }
 
+/* =========================
+   Crowd Climb Host Page
+   ========================= */
 
+.hostScreen {
+  position: relative;
+  min-height: 100vh;
+  background-image: url('/crowdclimb-join-bg.png');
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+  overflow: hidden;
+}
+
+.hostOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(15, 23, 42, 0.26) 0%,
+    rgba(15, 23, 42, 0.34) 50%,
+    rgba(15, 23, 42, 0.42) 100%
+  );
+}
+
+.hostContent {
+  position: relative;
+  z-index: 1;
+  padding-top: 28px;
+  padding-bottom: 32px;
+}
+
+/* Frosted host cards */
+.hostContent .card {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.18);
+}
+
+/* Top branded hero card */
+.hostHeroCard {
+  text-align: center;
+  padding-top: 26px;
+  padding-bottom: 24px;
+}
+
+.hostLogo {
+  width: min(34vw, 420px);
+  max-width: none;
+  height: auto;
+  display: block;
+  margin: 0 auto 12px auto;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.18));
+}
+
+.hostRoomCode {
+  margin-top: 0;
+  margin-bottom: 18px;
+  font-size: 1.6rem;
+  color: #1f2937;
+}
+
+.hostHeroCard button {
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.22);
+}
+
+.hostContent .table th,
+.hostContent .table td {
+  background: transparent;
+}
+
+@media (max-width: 900px) {
+  .hostContent {
+    padding-top: 18px;
+    padding-bottom: 24px;
+  }
+
+  .hostLogo {
+    width: min(68vw, 320px);
+  }
+
+  .hostRoomCode {
+    font-size: 1.3rem;
+  }
+}
