@@ -228,20 +228,6 @@ textarea {
   margin-bottom: 18px;
 }
 
-.joinTitle {
-  margin: 0;
-  font-size: clamp(2.6rem, 5vw, 4.8rem);
-  line-height: 0.95;
-  letter-spacing: 0.03em;
-}
-
-.joinTagline {
-  margin-top: 14px;
-  font-size: clamp(1rem, 2vw, 1.35rem);
-  color: rgba(255, 255, 255, 0.92);
-  max-width: 30ch;
-}
-
 .joinCardHero {
   background: rgba(255, 255, 255, 0.90);
   backdrop-filter: blur(8px);
