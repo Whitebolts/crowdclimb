@@ -918,7 +918,6 @@ export default function HostPage() {
         )}
 
         <div className="card">
-          <div className="card">
   <div className="mountainLeaderboardHeader">
     <div>
       <h2>Mountain Leaderboard</h2>
@@ -975,7 +974,7 @@ export default function HostPage() {
 
               <div style={{ position: 'absolute', inset: 0 }}>
                 {sortedPlayers.map(player => {
-                  const pos = mountainPositions[player.id] || { x: 50, y: 84 }
+                  const pos = mountainPositions[player.id] || { x: 50, y: 76 }
                   const isLeader = player.score === highestScore && highestScore > 0
 
                   return (
