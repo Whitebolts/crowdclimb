@@ -21,7 +21,7 @@ export default function HostPage() {
   const [roomId, setRoomId] = useState(null)
   const [players, setPlayers] = useState([])
   const [currentQuestion, setCurrentQuestion] = useState(0)
-const importFileRef = useRef(null)
+  const importFileRef = useRef(null)
   const [questionCount, setQuestionCount] = useState(0)
   const [currentQuestionText, setCurrentQuestionText] = useState('')
   const [roomStatus, setRoomStatus] = useState('lobby')
@@ -292,35 +292,6 @@ const importQuestionsFromFile = (event) => {
 
 const openImportQuestionsPicker = () => {
   importFileRef.current?.click()
-}
-
-    
-  const exportPayload = {
-    app: 'Crowd Climb',
-    exported_at: new Date().toISOString(),
-    question_count: customQuestions.length,
-    questions: customQuestions.map((q, index) => ({
-      question_order: index,
-      question_text: q.question_text,
-      answers: q.answers
-    }))
-  }
-
-  const blob = new Blob(
-    [JSON.stringify(exportPayload, null, 2)],
-    { type: 'application/json' }
-  )
-
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  const date = new Date().toISOString().slice(0, 10)
-
-  link.href = url
-  link.download = `crowd-climb-questions-${date}.json`
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
 }
   
   const beginEditQuestion = (index) => {
