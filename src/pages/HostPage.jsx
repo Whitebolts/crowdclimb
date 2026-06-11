@@ -792,7 +792,7 @@ const openImportQuestionsPicker = () => {
 
     // Score 0 sits on the lower mountain/base area.
     // Full score reaches near the central summit.
-    const y = 82 - progress * 64
+    const y = 82 - progress * 68
 
     // Players spread widely at the base and converge near the summit.
     let bandWidth = 70 - progress * 56
@@ -1111,7 +1111,7 @@ style={{
 
               <div style={{ position: 'absolute', inset: 0 }}>
                 {sortedPlayers.map(player => {
-                  const pos = mountainPositions[player.id] || { x: 50, y: 76 }
+                  const pos = mountainPositions[player.id] || { x: 50, y: 82 }
                   const isLeader = player.score === highestScore && highestScore > 0
 
                   return (
