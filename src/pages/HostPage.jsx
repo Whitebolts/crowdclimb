@@ -30,7 +30,15 @@ export default function HostPage() {
 
   const [draftQuestion, setDraftQuestion] = useState('')
   const [draftAnswers, setDraftAnswers] = useState(['', '', '', ''])
-  const [customQuestions, setCustomQuestions] = useState([])
+  const [customQuestions, setCustomQuestions] = useState(() => {
+  try {
+    const savedQuestions = localStorage.getItem('crowdClimbQuestionBank')
+    return savedQuestions ? JSON.parse(savedQuestions) : []
+  } catch (error) {
+    console.error('Could not load saved question bank:', error)
+    return []
+  }
+})
   const [showQuestionBuilder, setShowQuestionBuilder] = useState(true)
   const [editingIndex, setEditingIndex] = useState(null)
   
@@ -142,7 +150,29 @@ export default function HostPage() {
     setDraftAnswers(['', '', '', ''])
     setEditingIndex(null)
   }
+const clearQuestionBank = () => {
+  const confirmed = window.confirm(
+    'Clear the saved question bank from this browser? This will not affect exported JSON files.'
+  )
 
+  if (!confirmed) return
+
+  setCustomQuestions([])
+  resetDraft()
+  localStorage.removeItem('crowdClimbQuestionBank')
+}
+  
+  useEffect(() => {
+  try {
+    localStorage.setItem(
+      'crowdClimbQuestionBank',
+      JSON.stringify(customQuestions)
+    )
+  } catch (error) {
+    console.error('Could not save question bank:', error)
+  }
+}, [customQuestions])
+  
   const addOrSaveQuestionDraft = () => {
     const prompt = draftQuestion.trim()
     const answers = draftAnswers.map(a => a.trim()).filter(Boolean)
@@ -825,7 +855,9 @@ const openImportQuestionsPicker = () => {
           >
             {showQuestionBuilder ? 'Hide Questions' : 'Show Questions'}
           </button>
-
+<button style={{ marginLeft: 10 }} onClick={clearQuestionBank}>
+  Clear Question Bank
+</button>
           <button style={{ marginLeft: 10 }} onClick={exportQuestions}>
   Export Questions
 </button>
