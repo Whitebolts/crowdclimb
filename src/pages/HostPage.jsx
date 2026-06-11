@@ -991,22 +991,51 @@ const openImportQuestionsPicker = () => {
           <p>{currentQuestionText || 'Start the game to load questions'}</p>
         </div>
 
-       
+      <div className="card">
+  <h2>Reveal Results</h2>
 
-        <div className="card">
-          <h2>Reveal Results</h2>
-          {!revealResult ? (
-            <p>No reveal yet for this question.</p>
-          ) : (
-            <>
-              <p><strong>Winning answer(s):</strong> {revealResult.winningAnswers.join(' / ')}</p>
-              <p><strong>Counts:</strong></p>
-              {Object.entries(revealResult.counts).map(([answer, count]) => (
-                <div key={answer}>{answer}: {count}</div>
-              ))}
-            </>
-          )}
-        </div>
+  {!revealResult ? (
+    <p>No reveal yet for this question.</p>
+  ) : (
+    <>
+      <p>
+        <strong>Winning answer(s):</strong>{' '}
+        {revealResult.winningAnswers.join(' / ')}
+      </p>
+
+      <div className="revealBars">
+        {Object.entries(revealResult.counts).map(([answer, count]) => {
+          const maxCount = Math.max(...Object.values(revealResult.counts))
+          const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0
+          const isWinningAnswer = revealResult.winningAnswers.includes(answer)
+
+          return (
+            <div
+              key={answer}
+              className={`revealBarRow ${isWinningAnswer ? 'revealBarWinner' : ''}`}
+            >
+              <div className="revealBarLabel">
+                {answer}
+              </div>
+
+              <div className="revealBarTrack">
+                <div
+                  className="revealBarFill"
+                  style={{ width: `${percentage}%` }}
+                />
+              </div>
+
+              <div className="revealBarCount">
+                {count}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </>
+  )}
+</div>
+
 
         {isGameFinished && (
           <div className="card" style={{ background: 'rgba(255, 250, 243, 0.86)', borderColor: '#fcd34d' }}>
