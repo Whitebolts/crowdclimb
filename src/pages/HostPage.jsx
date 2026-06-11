@@ -1,5 +1,5 @@
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 function generateRoomCode() {
@@ -32,7 +32,9 @@ export default function HostPage() {
   const [customQuestions, setCustomQuestions] = useState([])
   const [showQuestionBuilder, setShowQuestionBuilder] = useState(true)
   const [editingIndex, setEditingIndex] = useState(null)
-
+  
+const importFileRef = useRef(null)
+  
   const fetchPlayers = async (targetRoomId) => {
     if (!targetRoomId) return
 
@@ -173,6 +175,98 @@ export default function HostPage() {
     return
   }
 
+    const normalizeImportedQuestions = (rawQuestions) => {
+  if (!Array.isArray(rawQuestions)) {
+    throw new Error('The file does not contain a questions list.')
+  }
+
+  const normalized = rawQuestions.map((q, index) => {
+    const questionText =
+      typeof q.question_text === 'string'
+        ? q.question_text.trim()
+        : typeof q.q === 'string'
+          ? q.q.trim()
+          : ''
+
+    const answersSource = Array.isArray(q.answers)
+      ? q.answers
+      : Array.isArray(q.a)
+        ? q.a
+        : []
+
+    const answers = answersSource
+      .map(answer => String(answer).trim())
+      .filter(Boolean)
+
+    if (!questionText) {
+      throw new Error(`Question ${index + 1} is missing question text.`)
+    }
+
+    if (answers.length < 2 || answers.length > 4) {
+      throw new Error(`Question ${index + 1} must have between 2 and 4 answers.`)
+    }
+
+    return {
+      question_text: questionText,
+      answers
+    }
+  })
+
+  if (normalized.length === 0) {
+    throw new Error('The file does not contain any questions.')
+  }
+
+  return normalized
+}
+
+const importQuestionsFromFile = (event) => {
+  const file = event.target.files?.[0]
+
+  if (!file) return
+
+  const reader = new FileReader()
+
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result)
+
+      const rawQuestions = Array.isArray(parsed)
+        ? parsed
+        : parsed.questions
+
+      const importedQuestions = normalizeImportedQuestions(rawQuestions)
+
+      const confirmed = window.confirm(
+        `Import ${importedQuestions.length} question${importedQuestions.length === 1 ? '' : 's'} and replace the current question set?`
+      )
+
+      if (!confirmed) return
+
+      setCustomQuestions(importedQuestions)
+      resetDraft()
+      setShowQuestionBuilder(true)
+
+      alert(`Imported ${importedQuestions.length} question${importedQuestions.length === 1 ? '' : 's'}.`)
+    } catch (error) {
+      console.error('Question import error:', error)
+      alert(`Could not import questions: ${error.message}`)
+    } finally {
+      event.target.value = ''
+    }
+  }
+
+  reader.onerror = () => {
+    alert('Could not read the selected file.')
+    event.target.value = ''
+  }
+
+  reader.readAsText(file)
+}
+
+const openImportQuestionsPicker = () => {
+  importFileRef.current?.click()
+}
+    
   const exportPayload = {
     app: 'Crowd Climb',
     exported_at: new Date().toISOString(),
@@ -736,6 +830,20 @@ export default function HostPage() {
           <button style={{ marginLeft: 10 }} onClick={exportQuestions}>
   Export Questions
 </button>
+
+          
+<button style={{ marginLeft: 10 }} onClick={openImportQuestionsPicker}>
+  Import Questions
+</button>
+
+<input
+  ref={importFileRef}
+  type="file"
+  accept="application/json,.json"
+  style={{ display: 'none' }}
+  onChange={importQuestionsFromFile}
+/>
+
           
         </div>
 
