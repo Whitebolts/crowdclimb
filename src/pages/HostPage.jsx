@@ -991,40 +991,7 @@ const openImportQuestionsPicker = () => {
           <p>{currentQuestionText || 'Start the game to load questions'}</p>
         </div>
 
-        <div className="card">
-          <h2>Submission Status ({submittedCount} / {totalPlayers})</h2>
-          {players.length === 0 ? (
-            <p>No players joined this room yet.</p>
-          ) : (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Player</th>
-                  <th>Submitted</th>
-                  <th>Answer</th>
-                </tr>
-              </thead>
-              <tbody>
-                {players.map(player => {
-                  const submittedAnswer = submittedMap[player.id]
-                  const hasSubmitted = Boolean(submittedAnswer)
-
-                  return (
-                    <tr key={player.id}>
-                      <td>{player.nickname}</td>
-                      <td>{hasSubmitted ? 'Yes' : 'No'}</td>
-                      <td>
-                        {roomStatus === 'reveal' || roomStatus === 'finished'
-                          ? (submittedAnswer || '—')
-                          : (hasSubmitted ? 'Hidden' : 'Waiting')}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
+       
 
         <div className="card">
           <h2>Reveal Results</h2>
@@ -1059,9 +1026,9 @@ const openImportQuestionsPicker = () => {
         <div className="card">
   <div className="mountainLeaderboardHeader">
     <div>
-      <h2>Mountain Leaderboard</h2>
+      <h2>Submission Status ({submittedCount} / {totalPlayers})</h2>
       <p style={{ marginTop: 0, color: '#475569' }}>
-        Players begin at the base and climb toward the summit as they score points.
+        Mountain Leaderboard
       </p>
     </div>
 
