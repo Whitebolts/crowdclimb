@@ -792,10 +792,10 @@ const openImportQuestionsPicker = () => {
 
     // Score 0 sits on the lower mountain/base area.
     // Full score reaches near the central summit.
-    const y = 76 - progress * 58
+    const y = 82 - progress * 64
 
     // Players spread widely at the base and converge near the summit.
-    let bandWidth = 84 - progress * 68
+    let bandWidth = 70 - progress * 56
 
     if (bandPlayers.length === 1) {
       byId[bandPlayers[0].id] = { x: 50, y }
@@ -1089,7 +1089,7 @@ const openImportQuestionsPicker = () => {
 }}
             >
              <img
-  src="/crowdclimb-mountain-board.png"
+  src="/crowdclimb_bg_night.png"
   alt="Mountain leaderboard"
   onError={(e) => {
     e.currentTarget.style.display = 'none'
