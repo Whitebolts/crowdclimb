@@ -528,13 +528,13 @@ textarea {
   justify-content: center;
   font-weight: 800;
   font-size: 14px;
-  border: 3px solid rgba(255, 255, 255, 0.96);
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.22);
+  border: 3px solid rgba(255, 255, 255, 0.98);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
 }
 
 .mountainTokenLeader {
   background: #d97706;
-  box-shadow: 0 10px 24px rgba(217, 119, 6, 0.32);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.38);
 }
 
 .mountainTokenTooltip {
