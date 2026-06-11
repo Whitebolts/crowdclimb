@@ -1081,11 +1081,12 @@ const openImportQuestionsPicker = () => {
             <div
               style={{
   position: 'relative',
-  minHeight: 560,
+  aspectRatio: '3 / 2',
+  minHeight: 420,
   marginTop: 12,
   borderRadius: 20,
   overflow: 'hidden',
-  background: 'linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.08) 100%)'
+  background: '#0f172a'
 }}
             >
              <img
@@ -1094,17 +1095,18 @@ const openImportQuestionsPicker = () => {
   onError={(e) => {
     e.currentTarget.style.display = 'none'
   }}
-  style={{
-    position: 'absolute',
-    left: '50%',
-    top: 20,
-    transform: 'translateX(-50%)',
-    width: 'min(100%, 1100px)',
-    height: '78%',
-    objectFit: 'contain',
-    opacity: 0.98,
-    pointerEvents: 'none'
-  }}
+  
+style={{
+  position: 'absolute',
+  inset: 0,
+  width: '100%',
+  height: '100%',
+  objectFit: 'cover',
+  objectPosition: 'center center',
+  opacity: 1,
+  pointerEvents: 'none'
+}}
+
 />
 
               <div style={{ position: 'absolute', inset: 0 }}>
