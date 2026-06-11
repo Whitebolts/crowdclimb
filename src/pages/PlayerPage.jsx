@@ -220,8 +220,8 @@ export default function PlayerPage() {
 
     grouped.forEach((bandPlayers, bandScore) => {
       const progress = Math.min(Math.max(bandScore / maxScore, 0), 1)
-      const y = 76 - progress * 58
-      let bandWidth = 84 - progress * 68
+      const y = 82 - progress * 68
+      let bandWidth = 70 - progress * 56
 
       if (bandPlayers.length === 1) {
         byId[bandPlayers[0].id] = { x: 50, y }
@@ -256,7 +256,7 @@ export default function PlayerPage() {
 
         <div className="playerMountainBoard">
           <img
-            src="/crowdclimb-mountain-board.png"
+            src="/crowdclimb_bg_night.png"
             alt="Mountain leaderboard"
             className="playerMountainImage"
             onError={(e) => {
@@ -266,7 +266,7 @@ export default function PlayerPage() {
 
           <div className="playerMountainTokenLayer">
             {sortedPlayers.map(player => {
-              const pos = mountainPositions[player.id] || { x: 50, y: 76 }
+              const pos = mountainPositions[player.id] || { x: 50, y: 82 }
               const isLeader = player.score === highestScore && highestScore > 0
               const isCurrentPlayer = player.id === localStorage.getItem('playerId')
 
