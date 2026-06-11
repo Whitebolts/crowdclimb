@@ -1026,9 +1026,9 @@ const openImportQuestionsPicker = () => {
         <div className="card">
   <div className="mountainLeaderboardHeader">
     <div>
-      <h2>Submission Status ({submittedCount} / {totalPlayers})</h2>
+      <h2>Mountain Leaderboard</h2>
       <p style={{ marginTop: 0, color: '#475569' }}>
-        Mountain Leaderboard
+        Submission Status ({submittedCount} / {totalPlayers})
       </p>
     </div>
 
