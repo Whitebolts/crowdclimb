@@ -9,7 +9,7 @@ function naturalNameCompare(a, b) {
     sensitivity: 'base'
   })
 }
-
+ 
 function getTokenLabel(nickname) {
   const clean = String(nickname || '').trim()
   if (!clean) return '?'
