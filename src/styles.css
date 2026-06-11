@@ -733,3 +733,67 @@ textarea {
   }
 }
 
+/* =========================
+   Reveal Results Bar Chart
+   ========================= */
+
+.revealBars {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+  max-width: 760px;
+}
+
+.revealBarRow {
+  display: grid;
+  grid-template-columns: minmax(110px, 180px) 1fr 42px;
+  align-items: center;
+  gap: 12px;
+}
+
+.revealBarLabel {
+  font-weight: 700;
+  color: #1f2937;
+  overflow-wrap: anywhere;
+}
+
+.revealBarTrack {
+  height: 18px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.28);
+  overflow: hidden;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+}
+
+.revealBarFill {
+  height: 100%;
+  border-radius: 999px;
+  background: #2563eb;
+  transition: width 0.4s ease;
+}
+
+.revealBarCount {
+  font-weight: 800;
+  color: #1f2937;
+  text-align: right;
+}
+
+.revealBarWinner .revealBarLabel,
+.revealBarWinner .revealBarCount {
+  color: #92400e;
+}
+
+.revealBarWinner .revealBarFill {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+@media (max-width: 700px) {
+  .revealBarRow {
+    grid-template-columns: 1fr 42px;
+    gap: 8px;
+  }
+
+  .revealBarLabel {
+    grid-column: 1 / -1;
+  }
+}
