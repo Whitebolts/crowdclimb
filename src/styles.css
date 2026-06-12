@@ -11,7 +11,6 @@ body {
   margin: auto;
   padding: 20px;
 }
- 
 .card {
   background: white;
   border-radius: 16px;
@@ -424,7 +423,7 @@ textarea {
 
 .playerCardHero {
   width: 100%;
-  max-width: 760px;
+  max-width: 900px;
   background: rgba(255, 255, 255, 0.36);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
@@ -592,10 +591,13 @@ textarea {
 .playerGameShell {
   flex-direction: column;
   gap: 18px;
+  width: 100%;
+  align-items: center;
+
 }
 
 
-playerMountainCard {
+.playerMountainCard {
   width: 100%;
   max-width: 900px;
   background: rgba(255, 255, 255, 0.30);
@@ -805,4 +807,21 @@ playerMountainCard {
   .revealBarLabel {
     grid-column: 1 / -1;
   }
+}
+
+/* Final player layout width fix */
+
+.playerGameShell {
+  width: 100%;
+  align-items: center;
+}
+
+.playerCardHero,
+.playerMountainCard {
+  width: 100%;
+  max-width: 900px;
+}
+
+.playerMountainBoard {
+  width: 100%;
 }
