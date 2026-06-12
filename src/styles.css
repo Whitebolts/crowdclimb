@@ -589,8 +589,6 @@ textarea {
    ========================= */
 
 .playerGameShell {
-  flex-direction: column;
-  gap: 18px;
   width: 100%;
   align-items: center;
 
@@ -679,7 +677,7 @@ textarea {
   }
 
   .playerMountainCard {
-    padding: 14px;
+    padding: 12px;
     border-radius: 20px;
   }
 
@@ -820,6 +818,7 @@ textarea {
 .playerMountainCard {
   width: 100%;
   max-width: 900px;
+  box-sizing: border-box;
 }
 
 .playerMountainBoard {
