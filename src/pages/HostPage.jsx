@@ -790,15 +790,17 @@ const openImportQuestionsPicker = () => {
   grouped.forEach((bandPlayers, bandScore) => {
     const progress = Math.min(Math.max(bandScore / maxScore, 0), 1)
 
+    const summitX = 48.5
+
     // Score 0 sits on the lower mountain/base area.
     // Full score reaches near the central summit.
-    const y = 82 - progress * 68
+    const y = 82 - progress * 70
 
     // Players spread widely at the base and converge near the summit.
     let bandWidth = 70 - progress * 56
 
     if (bandPlayers.length === 1) {
-      byId[bandPlayers[0].id] = { x: 50, y }
+      byId[bandPlayers[0].id] = { x: summitX, y }
       return
     }
 
@@ -806,7 +808,7 @@ const openImportQuestionsPicker = () => {
       bandWidth = Math.min(bandWidth, 16)
     }
 
-    const startX = 50 - bandWidth / 2
+    const startX = summitX - bandWidth / 2
     const step = bandPlayers.length > 1 ? bandWidth / (bandPlayers.length - 1) : 0
 
     bandPlayers.forEach((player, idx) => {
