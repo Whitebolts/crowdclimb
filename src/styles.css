@@ -824,3 +824,29 @@ textarea {
 .playerMountainBoard {
   width: 100%;
 }
+
+/* Final player page card layout and width alignment */
+
+.playerGameShell {
+  display: flex;
+  flex-direction: column !important;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  gap: 18px;
+  padding-top: 16px;
+  padding-bottom: 24px;
+  box-sizing: border-box;
+}
+
+.playerCardHero,
+.playerMountainCard {
+  width: 100%;
+  max-width: 900px;
+  box-sizing: border-box;
+}
+
+.playerMountainBoard {
+  width: 100%;
+  box-sizing: border-box;
+}
