@@ -682,7 +682,8 @@ playerMountainCard {
   }
 
   .playerMountainBoard {
-    min-height: 240px;
+    min-height: 300px;
+    aspect-ratio: 3 / 2;
   }
 
   .playerMountainCard h3 {
